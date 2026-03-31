@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone Store | Smart Management</title>
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+</head>
+<body class="dark-theme">
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <div class="logo">P<span>S</span></div>
+        </div>
+
+        <nav class="sidebar-nav">
+            <button class="nav-item active" title="Visão Geral">
+                <span class="material-symbols-outlined">dashboard</span>
+                <span class="nav-text">Visão Geral</span>
+            </button>
+            <button class="nav-item" title="Unidades">
+                <span class="material-symbols-outlined">store</span>
+                <span class="nav-text">Unidades</span>
+            </button>
+            <button class="nav-item" title="Vendedores">
+                <span class="material-symbols-outlined">groups</span>
+                <span class="nav-text">Vendedores</span>
+            </button>
+            <button class="nav-item" title="Performance">
+                <span class="material-symbols-outlined">query_stats</span>
+                <span class="nav-text">Performance</span>
+            </button>
+        </nav>
+
+        <div class="sidebar-footer">
+            <div class="user-profile">
+                <div class="avatar">GS</div>
+                <div class="user-info">
+                    <span class="user-name">Gestor Phone</span>
+                    <span class="user-role">Administrador</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        
+        <header class="top-header">
+            <div class="header-left">
+                <div class="view-info">
+                    <h1 id="current-view-title">Visão Geral</h1>
+                    <div class="sub-info">
+                        <span id="last-update">--/--/-- --:--</span>
+                        <span class="divider">|</span>
+                        <span id="relogio">00:00:00</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="global-filters">
+                    <div class="filter-group">
+                        <label>Loja</label>
+                        <select id="filter-loja"><option value="ALL">Todas</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Modelo</label>
+                        <select id="filter-tipo"><option value="ALL">Todos</option></select>
+                    </div>
+                    <div class="filter-group">
+                        <label>Gestão</label>
+                        <select id="filter-gestao"><option value="ALL">Todas</option></select>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div id="view-container">
+            <section id="visao-1" class="view-section active">
+                
+                <div class="kpi-grid">
+                    <div class="kpi-card" id="kpi-fat">
+                        <span class="material-symbols-outlined">payments</span>
+                        <div class="kpi-data"><span>Faturamento </span><b>R$ 0</b></div>
+                    </div>
+                    <div class="kpi-card" id="kpi-vendas">
+                        <span class="material-symbols-outlined">shopping_cart</span>
+                        <div class="kpi-data"><span>Vendas </span><b>0</b></div>
+                    </div>
+                    <div class="kpi-card" id="kpi-pecas">
+                        <span class="material-symbols-outlined">inventory_2</span>
+                        <div class="kpi-data"><span>Peças </span><b>0</b></div>
+                    </div>
+                    <div class="kpi-card" id="kpi-ticket">
+                        <span class="material-symbols-outlined">confirmation_number</span>
+                        <div class="kpi-data"><span>Ticket </span><b>R$ 0</b></div>
+                    </div>
+                    <div class="kpi-card" id="kpi-pa">
+                        <span class="material-symbols-outlined">layers</span>
+                        <div class="kpi-data"><span>P.A </span><b>0.00</b></div>
+                    </div>
+                </div>
+
+                <div class="main-charts-row">
+                    <div class="chart-box" id="box-sazonalidade">
+                        <h3 class="chart-label">Faturamento p/ Dia</h3>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-sazonalidade"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-box" id="box-mix-cat">
+                        <h3 class="chart-label">Mix Categorias</h3>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-mix-cat"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-box" id="box-mix-planos">
+                        <h3 class="chart-label">Mix Planos</h3>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-mix-planos"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="atingimento-row">
+                    <div class="gauge-box" id="box-atg-geral">
+                        <canvas id="chart-atg-geral"></canvas>
+                        <div class="gauge-center">
+                            <span class="percent" id="val-geral">0%</span>
+                            <span class="label">GERAL</span>
+                        </div>
+                    </div>
+                    <div class="gauge-box" id="box-atg-ace">
+                        <canvas id="chart-atg-ace"></canvas>
+                        <div class="gauge-center">
+                            <span class="percent" id="val-ace">0%</span>
+                            <span class="label">ACE</span>
+                        </div>
+                    </div>
+                    <div class="gauge-box" id="box-atg-prt">
+                        <canvas id="chart-atg-prt"></canvas>
+                        <div class="gauge-center">
+                            <span class="percent" id="val-prt">0%</span>
+                            <span class="label">PROTECT</span>
+                        </div>
+                    </div>
+                </div>
+
+            </section>
+        </div>
+    </main>
+
+    <script src="dados.js"></script>
+    <script src="script_engine.js"></script>
+</body>
+</html>
