@@ -208,6 +208,7 @@ canvas {
 .gauge-center {
     position: absolute;
     text-align: center;
+    display: grid;
 }
 
 .gauge-center .percent {
