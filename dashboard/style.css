@@ -91,6 +91,7 @@ body {
     overflow: hidden;
 }
 
+
 .top-header {
     height: 60px;
     flex-shrink: 0;
@@ -101,6 +102,7 @@ body {
     border-bottom: 1px solid var(--border);
     background: #000;
 }
+
 
 .header-left {
     display: flex;
@@ -113,15 +115,19 @@ body {
     font-weight: 800;
 }
 
+#last-update{
+    color: #fff;
+}
+
 .header-left .sub-info {
     display: flex;
     align-items: center;
     gap: 10px;
     font-size: 0.75rem;
-    color: var(--text-dim);
+    color: var(--primary);
 }
 
-.divider { color: var(--border); }
+.divider { color: var(--primary); }
 
 .view-section {
     height: calc(100vh - 60px);
@@ -130,6 +136,15 @@ body {
     flex-direction: column;
     gap: 10px;
     overflow: hidden;
+}
+
+.material-symbols-outlined{
+    color: #f2c029;
+
+}
+.kpi-data{
+    font-size:x-small;
+    flex-direction: column;
 }
 
 .kpi-grid {
@@ -175,6 +190,7 @@ body {
     flex-direction: column;
     min-height: 0;
     overflow: hidden;
+    
 }
 
 .chart-label {
