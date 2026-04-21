@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Phone Store dashboard</title>
+    <title>Phone Store Dashboard</title>
     
     <link rel="stylesheet" href="style.css">
     
@@ -12,10 +12,19 @@
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+
+    <style>
+        /* Estilização específica das labels dos filtros (Missão 02) */
+        .filter-group label {
+            font-size: 10px !important;
+            color: #666 !important;
+            text-transform: uppercase;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 4px;
+        }
+    </style>
 </head>
-<style>
-    
-</style>
 <body class="dark-theme">
 
     <aside class="sidebar">
@@ -71,15 +80,25 @@
                 <div class="global-filters">
                     <div class="filter-group">
                         <label>Loja</label>
-                        <select id="filter-loja"><option value="ALL">Todas</option></select>
+                        <select id="filter-loja">
+                            <option value="ALL">Todas</option>
+                        </select>
                     </div>
                     <div class="filter-group">
                         <label>Modelo</label>
-                        <select id="filter-tipo"><option value="ALL">Todos</option></select>
+                        <select id="filter-modelo">
+                            <option value="ALL">Todos</option>
+                            <option value="LOJA">LOJA</option>
+                            <option value="QUIOSQUE">QUIOSQUE</option>
+                        </select>
                     </div>
                     <div class="filter-group">
                         <label>Gestão</label>
-                        <select id="filter-gestao"><option value="ALL">Todas</option></select>
+                        <select id="filter-gestao">
+                            <option value="ALL">Todas</option>
+                            <option value="PRÓPRIA">PRÓPRIA</option>
+                            <option value="FRANQUIA">FRANQUIA</option>
+                        </select>
                     </div>
                 </div>
             </div>
@@ -91,23 +110,23 @@
                 <div class="kpi-grid">
                     <div class="kpi-card" id="kpi-fat">
                         <span class="material-symbols-outlined">payments</span>
-                        <div class="kpi-data"><span>Faturamento </span><b style="font-size: medium ">R$ 0</b></div>
+                        <div class="kpi-data"><span>Faturamento</span><b style="font-size: medium">R$ 0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-vendas">
                         <span class="material-symbols-outlined">shopping_cart</span>
-                        <div class="kpi-data"><span>Vendas </span><b style="font-size: medium;">0</b></div>
+                        <div class="kpi-data"><span>Vendas</span><b style="font-size: medium;">0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-pecas">
                         <span class="material-symbols-outlined">inventory_2</span>
-                        <div class="kpi-data"><span>Peças </span><b style="font-size: medium; ">0</b></div>
+                        <div class="kpi-data"><span>Peças</span><b style="font-size: medium;">0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-ticket">
                         <span class="material-symbols-outlined">confirmation_number</span>
-                        <div class="kpi-data"><span>Ticket </span><b style="font-size: medium;">R$ 0</b></div>
+                        <div class="kpi-data"><span>Ticket</span><b style="font-size: medium;">R$ 0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-pa">
                         <span class="material-symbols-outlined">layers</span>
-                        <div class="kpi-data"><span>P.A </span><b style="font-size: medium; ">0.00</b></div>
+                        <div class="kpi-data"><span>P.A</span><b style="font-size: medium;">0.00</b></div>
                     </div>
                 </div>
 

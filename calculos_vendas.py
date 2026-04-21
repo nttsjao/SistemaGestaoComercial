@@ -62,16 +62,49 @@ def calcular_kpis_topo(db, df_meta):
     }
 
 #TODO ==> 3. ESTRUTURA TABULAR DE UNIDADES (BASE PARA TODAS AS VISÕES)
-#? Cruza Fato e Dimensão para gerar performance por PDV, Projeção e Atingimentos
+#? [MISSÃO D06] Cruza Fato e Dimensão para gerar performance por PDV
 def preparar_base_unidades_completa(db, df_meta):
     tempo = obter_metricas_tempo()
     df_snap = db['vendas_snapshot'].copy()
-    df_lojas = db['dim_lojas']
+    df_lojas = db['dim_lojas'].copy()
     
+    #* 🛡️ SANITIZAÇÃO DE IDs (Fix para o Erro de Merge: object vs float64)
+    #* Converte para numérico (ignora erros), preenche com -1, força inteiro, força string
+    df_meta['ID_LOJA'] = pd.to_numeric(df_meta['ID_LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
+    df_snap['ID LOJA'] = pd.to_numeric(df_snap['ID LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
+    df_lojas['ID LOJA'] = pd.to_numeric(df_lojas['ID LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
+
     #* 1. Realizado por Categoria (ACE e PRT dinâmicos para gauges)
     rel_cat = df_snap.groupby(['ID LOJA', 'CATEGORIA'])['REALIZADO'].sum().unstack(fill_value=0).reset_index()
     for col in ['ACE', 'PRT', 'CEL', 'SOM']:
         if col not in rel_cat: rel_cat[col] = 0
+
+    #* 1.1 Sazonalidade Quebrada por Loja (Base JS Dinâmico)
+    dias_map = {'Monday':'Seg', 'Tuesday':'Ter', 'Wednesday':'Qua', 'Thursday':'Qui', 'Friday':'Sex', 'Saturday':'Sáb', 'Sunday':'Dom'}
+    df_snap['Date'] = pd.to_datetime(df_snap['Date'], dayfirst=True, errors='coerce')
+    df_snap['Dia_Semana'] = df_snap['Date'].dt.day_name().map(dias_map)
+    rel_saz = df_snap.groupby(['ID LOJA', 'Dia_Semana'])['REALIZADO'].sum().unstack(fill_value=0).reset_index()
+    ordem_dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
+    for dia in ordem_dias:
+        if dia not in rel_saz: rel_saz[dia] = 0
+
+    #* 1.2 Mix de Planos Quebrado por Loja (Base JS Dinâmico)
+    df_plano = db['vendas_plano'].copy()
+    df_plano['ID LOJA'] = pd.to_numeric(df_plano['ID LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
+    
+    df_plano['Date'] = pd.to_datetime(df_plano['Date'], dayfirst=True, errors='coerce')
+    df_plano_vigente = df_plano[
+        (df_plano['Date'].dt.month == tempo['mes']) & 
+        (df_plano['Date'].dt.year == tempo['ano'])
+    ].copy()
+    df_plano_vigente['FATURADO'] = df_plano_vigente['FATURADO'].apply(limpar_moeda)
+    df_plano_vigente = df_plano_vigente.merge(db['dim_planos'], on='ID PLANO', how='left')
+    
+    if not df_plano_vigente.empty:
+        rel_planos = df_plano_vigente.groupby(['ID LOJA', 'PLANO'])['FATURADO'].sum().unstack(fill_value=0).reset_index()
+    else:
+        rel_planos = pd.DataFrame(columns=['ID LOJA'])
+    planos_cols = [c for c in rel_planos.columns if c != 'ID LOJA']
 
     #* 2. Realizado Total por Loja
     rel_total = df_snap.groupby('ID LOJA').agg({
@@ -80,10 +113,13 @@ def preparar_base_unidades_completa(db, df_meta):
         'QTD_PEÇAS': 'sum'
     }).reset_index()
 
-    #* 3. Merge de Metas e Realizados (Sincronização ID_LOJA x ID LOJA)
+    #* 3. Merge de Metas e Realizados
     df_tab = df_meta[['ID_LOJA', 'META_GERAL', 'META_ACE', 'META_PRT']].copy()
     df_tab = df_tab.merge(rel_total, left_on='ID_LOJA', right_on='ID LOJA', how='left').fillna(0)
-    df_tab = df_tab.merge(rel_cat[['ID LOJA', 'ACE', 'PRT']], on='ID LOJA', how='left').fillna(0)
+    df_tab = df_tab.merge(rel_cat[['ID LOJA', 'ACE', 'PRT', 'CEL', 'SOM']], on='ID LOJA', how='left').fillna(0)
+    df_tab = df_tab.merge(rel_saz[['ID LOJA'] + ordem_dias], on='ID LOJA', how='left').fillna(0)
+    if planos_cols:
+        df_tab = df_tab.merge(rel_planos, on='ID LOJA', how='left').fillna(0)
     
     #* 4. Merge com Dimensão Lojas (Nomes e Atributos)
     df_tab = df_tab.merge(df_lojas[['ID LOJA', 'NOME PDV', 'ID TIPO', 'TIPO PDV']], 
@@ -95,6 +131,14 @@ def preparar_base_unidades_completa(db, df_meta):
     df_tab['TICKET'] = df_tab['REALIZADO'] / df_tab['N_VENDAS'].replace(0, 1)
     df_tab['PA'] = df_tab['QTD_PEÇAS'] / df_tab['N_VENDAS'].replace(0, 1)
     
+    #* 6. [NOVO] Empacotamento Inteligente (Criação de Dicionários Locais por Loja para o JS)
+    df_tab['sazonalidade'] = df_tab.apply(lambda row: {dia: row.get(dia, 0) for dia in ordem_dias}, axis=1)
+    df_tab['mix_categorias'] = df_tab.apply(lambda row: {c: row.get(c, 0) for c in ['CEL', 'SOM', 'ACE', 'PRT']}, axis=1)
+    if planos_cols:
+        df_tab['mix_planos'] = df_tab.apply(lambda row: {p: row.get(p, 0) for p in planos_cols}, axis=1)
+    else:
+        df_tab['mix_planos'] = df_tab.apply(lambda row: {}, axis=1) 
+
     return df_tab.to_dict(orient='records')
 
 #TODO ==> 4. ANÁLISE OPERACIONAL (SAZONALIDADE E MIXES)
@@ -105,6 +149,7 @@ def preparar_analise_geral_completa(db):
     
     #* 4.1 Sazonalidade (Faturamento por Dia da Semana)
     dias_map = {'Monday':'Seg', 'Tuesday':'Ter', 'Wednesday':'Qua', 'Thursday':'Qui', 'Friday':'Sex', 'Saturday':'Sáb', 'Sunday':'Dom'}
+    df_snap['Date'] = pd.to_datetime(df_snap['Date'], dayfirst=True, errors='coerce')
     df_snap['Dia_Semana'] = df_snap['Date'].dt.day_name().map(dias_map)
     ordem_dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
     sazonalidade = df_snap.groupby('Dia_Semana')['REALIZADO'].sum().reindex(ordem_dias).fillna(0).to_dict()
