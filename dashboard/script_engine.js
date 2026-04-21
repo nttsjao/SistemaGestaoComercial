@@ -126,13 +126,46 @@ function renderMixDonut(id, dados) {
     const ctx = document.getElementById(id);
     if (!ctx) return;
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
+
     new Chart(ctx, {
         type: 'doughnut',
-        data: { labels: Object.keys(dados), datasets: [{ data: Object.values(dados), backgroundColor: CORES.sunset, borderColor: '#000', borderWidth: 2 }] },
-        options: { layout: { padding: 15 }, cutout: '72%', responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 8, boxWidth: 8 } },
-                datalabels: { anchor: 'end', align: 'end', color: '#fff', font: { size: 10, weight: 'bold' },
-                    formatter: (v, ctx) => { const total = ctx.dataset.data.reduce((a, b) => a + b, 0); return total > 0 ? ((v / total) * 100).toFixed(1) + '%' : '0%'; }
+        data: { 
+            labels: Object.keys(dados), 
+            datasets: [{ 
+                data: Object.values(dados), 
+                backgroundColor: CORES.sunset, 
+                borderColor: '#121212', // Cor de fundo do painel para contraste
+                borderWidth: 2 
+            }] 
+        },
+        options: { 
+            // Margem interna estrita em PIXELS para os rótulos não vazarem
+            layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } }, 
+            
+            // Diâmetro interno estrito em PIXELS (sem uso de '%')
+            cutout: 60, 
+            
+            responsive: true, 
+            maintainAspectRatio: false,
+            plugins: { 
+                legend: { 
+                    position: 'bottom', 
+                    labels: { color: '#888', font: { size: 10 }, padding: 20, boxWidth: 10 } 
+                },
+                datalabels: { 
+                    anchor: 'end', 
+                    align: 'end', 
+                    offset: 8, // Deslocamento em PIXELS
+                    color: '#fff', 
+                    font: { size: 10, weight: 'bold' },
+                    formatter: (v, ctx) => { 
+                        const total = ctx.dataset.data.reduce((a, b) => a + b, 0); 
+                        if (total === 0) return '';
+                        
+                        const perc = (v / total) * 100;
+                        // Regra D07: Só retorna o texto se a porcentagem for maior ou igual a 5%
+                        return perc >= 1 ? perc.toFixed(1) + '%' : ''; 
+                    }
                 }
             }
         }
