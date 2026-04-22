@@ -10,6 +10,22 @@ const CORES = {
     sunset: ['#FFD700', '#F2C029', '#FFA500', '#FF8C00', '#FF7F50']
 };
 
+const PALETAS_MIX = {
+    categorias:{
+        'CEL': '#FFB347',
+        'ACE': '#E67E22',
+        'SOM': '#8B0000',
+        'PRT': '#A9A9A9'
+    },
+    planos: {
+        'CREDIÁRIO': '#E67E22',
+        'DINHEIRO': '#2E8B57',
+        'CARTÃO': '#0047AB',
+        'BRASILCARD': '#8B0000',
+        'ODRES F': '#116466'  
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof dadosDashboard === 'undefined') {
         console.error("❌ Erro: dados.js não encontrado.");
@@ -92,8 +108,8 @@ function processarEDataRender() {
     const planosFinal = Object.fromEntries(Object.entries(dynPlanos).filter(([_, v]) => v > 0));
 
     renderSazonalidade(dynSaz);
-    renderMixDonut('chart-mix-cat', dynCat);
-    renderMixDonut('chart-mix-planos', planosFinal);
+    renderMixDonut('chart-mix-cat', dynCat, PALETAS_MIX.categorias);
+    renderMixDonut('chart-mix-planos', planosFinal, PALETAS_MIX.planos);
 
     document.getElementById('last-update').innerText = d.ultima_atualizacao;
 }
@@ -109,20 +125,67 @@ function renderKpiCards(stats) {
 
 function renderSazonalidade(dados) {
     const ctx = document.getElementById('chart-sazonalidade');
+    if (!ctx) return;
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
+
     new Chart(ctx, {
         type: 'bar',
         data: {
             labels: Object.keys(dados),
-            datasets: [{ data: Object.values(dados), backgroundColor: CORES.primary, borderRadius: 4 }]
+            datasets: [{
+                data: Object.values(dados),
+                backgroundColor: CORES.primary,
+                borderRadius: 4
+            }]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { display: false } },
-            scales: { y: { grid: { color: '#1a1a1a', borderDash: [2, 2] }, ticks: { display: false } }, x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } } }
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            
+            // Passo C: Cria uma margem no topo do Canvas para o texto não ser decepado
+            layout: { padding: { top: 20 } },
+            
+            plugins: {
+                legend: { display: false },
+                
+                // Passo A e B: Ativação, Posicionamento e Estilização
+                datalabels: { 
+                    display: true,
+                    anchor: 'end',
+                    align: 'end',
+                    color: '#888',
+                    font: { size: 10, weight: 'bold' },
+                    
+                    // Passo D: Formatação Compacta (ex: R$ 15 mil em vez de R$ 15.000)
+                    formatter: (v) => {
+                        if (v === 0) return ''; // Se não teve faturamento, não desenha o "0" para manter limpo
+                        
+                        return new Intl.NumberFormat('pt-BR', {
+                            style: 'currency',
+                            currency: 'BRL',
+                            notation: 'compact',
+                            maximumFractionDigits: 1
+                        }).format(v);
+                    }
+                }
+            },
+            scales: {
+                y: { 
+                    grid: { color: '#1a1a1a', borderDash: [2, 2] }, 
+                    ticks: { display: false },
+                    beginAtZero: true,
+                    grace: '10%' 
+                },
+                x: { 
+                    grid: { display: false }, 
+                    ticks: { color: '#888', font: { size: 10 } } 
+                }
+            }
         }
     });
 }
 
-function renderMixDonut(id, dados) {
+function renderMixDonut(id, dados, paleta) {
     const ctx = document.getElementById(id);
     if (!ctx) return;
     if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
@@ -133,18 +196,16 @@ function renderMixDonut(id, dados) {
             labels: Object.keys(dados), 
             datasets: [{ 
                 data: Object.values(dados), 
-                backgroundColor: CORES.sunset, 
-                borderColor: '#121212', // Cor de fundo do painel para contraste
+                backgroundColor: Object.keys(dados).map(chave => paleta[chave] || '#444444'), 
+                
+                borderColor: '#121212', 
                 borderWidth: 2 
             }] 
         },
         options: { 
-            // Margem interna estrita em PIXELS para os rótulos não vazarem
             layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } }, 
-            
-            // Diâmetro interno estrito em PIXELS (sem uso de '%')
-            cutout: 60, 
-            
+            radius: 95,
+            cutout: 50, 
             responsive: true, 
             maintainAspectRatio: false,
             plugins: { 
@@ -155,7 +216,7 @@ function renderMixDonut(id, dados) {
                 datalabels: { 
                     anchor: 'end', 
                     align: 'end', 
-                    offset: 8, // Deslocamento em PIXELS
+                    offset: 8, 
                     color: '#fff', 
                     font: { size: 10, weight: 'bold' },
                     formatter: (v, ctx) => { 
@@ -163,7 +224,6 @@ function renderMixDonut(id, dados) {
                         if (total === 0) return '';
                         
                         const perc = (v / total) * 100;
-                        // Regra D07: Só retorna o texto se a porcentagem for maior ou igual a 5%
                         return perc >= 1 ? perc.toFixed(1) + '%' : ''; 
                     }
                 }

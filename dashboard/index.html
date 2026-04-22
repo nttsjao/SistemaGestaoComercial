@@ -12,18 +12,6 @@
     
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
-
-    <style>
-        /* Estilização específica das labels dos filtros (Missão 02) */
-        .filter-group label {
-            font-size: 10px !important;
-            color: #666 !important;
-            text-transform: uppercase;
-            font-weight: 600;
-            display: block;
-            margin-bottom: 4px;
-        }
-    </style>
 </head>
 <body class="dark-theme">
 
@@ -110,29 +98,29 @@
                 <div class="kpi-grid">
                     <div class="kpi-card" id="kpi-fat">
                         <span class="material-symbols-outlined">payments</span>
-                        <div class="kpi-data"><span>Faturamento</span><b style="font-size: medium">R$ 0</b></div>
+                        <div class="kpi-data"><span>Faturamento</span><b>R$ 0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-vendas">
                         <span class="material-symbols-outlined">shopping_cart</span>
-                        <div class="kpi-data"><span>Vendas</span><b style="font-size: medium;">0</b></div>
+                        <div class="kpi-data"><span>Vendas</span><b>0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-pecas">
                         <span class="material-symbols-outlined">inventory_2</span>
-                        <div class="kpi-data"><span>Peças</span><b style="font-size: medium;">0</b></div>
+                        <div class="kpi-data"><span>Peças</span><b>0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-ticket">
                         <span class="material-symbols-outlined">confirmation_number</span>
-                        <div class="kpi-data"><span>Ticket</span><b style="font-size: medium;">R$ 0</b></div>
+                        <div class="kpi-data"><span>Ticket</span><b>R$ 0</b></div>
                     </div>
                     <div class="kpi-card" id="kpi-pa">
                         <span class="material-symbols-outlined">layers</span>
-                        <div class="kpi-data"><span>P.A</span><b style="font-size: medium;">0.00</b></div>
+                        <div class="kpi-data"><span>P.A</span><b>0.00</b></div>
                     </div>
                 </div>
 
                 <div class="main-charts-row">
                     <div class="chart-box" id="box-sazonalidade">
-                        <h3 class="chart-label">Faturamento p/ Dia</h3>
+                        <h3 class="chart-label">Faturamento por Semana</h3>
                         <div class="canvas-wrapper">
                             <canvas id="chart-sazonalidade"></canvas>
                         </div>
