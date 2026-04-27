@@ -4,8 +4,8 @@ const AppState = { filtro: { loja: 'ALL', modelo: 'ALL', gestao: 'ALL' } };
 
 const CORES = {
     primary: '#f2c029',
-    ace: '#2ecc71',
-    prt: '#ff4d4d',
+    ace: '#2ecc71',     // Verde (Sucesso)
+    prt: '#ff4d4d',     // Vermelho (Alerta)
     trilha: '#121212',
     sunset: ['#FFD700', '#F2C029', '#FFA500', '#FF8C00', '#FF7F50']
 };
@@ -36,13 +36,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setInterval(atualizarRelogio, 1000);
     setTimeout(() => processarEDataRender(), 150);
     
-    // [NOVO D03] Aciona o gatilho de navegação SPA e gerenciamento de filtros
     iniciarRoteamento();
 });
 
 window.addEventListener('resize', () => processarEDataRender());
 
-// #* MOTOR DE FILTRAGEM
+// #* MOTOR DE FILTRAGEM GLOBAL
 function filtrarBase(base) {
     if (!base) return [];
     return base.filter(item => {
@@ -58,13 +57,13 @@ function filtrarBase(base) {
     });
 }
 
-// #* PROCESSAMENTO E RENDERIZAÇÃO (REVISADO D06)
+// #* PROCESSAMENTO PRINCIPAL (GATILHO DE RENDERIZAÇÃO)
 function processarEDataRender() {
     const d = dadosDashboard;
     const baseFiltrada = filtrarBase(d.unidades);
     const atingIdeal = d.tempo?.ideal ?? 0;
 
-    // 1. Acumuladores de KPI
+    // 1. Acumuladores de KPI (Visão Geral)
     const stats = baseFiltrada.reduce((acc, curr) => {
         acc.faturamento += curr.REALIZADO || 0;
         acc.vendas += curr.N_VENDAS || 0;
@@ -74,7 +73,7 @@ function processarEDataRender() {
 
     renderKpiCards(stats);
 
-    // 2. Acumuladores de Metas (Gauges)
+    // 2. Acumuladores de Metas (Visão Geral)
     const metas = baseFiltrada.reduce((acc, curr) => {
         acc.real_g += curr.REALIZADO || 0; acc.meta_g += curr.META_GERAL || 0;
         acc.real_a += curr.ACE || 0; acc.meta_a += curr.META_ACE || 0;
@@ -86,38 +85,191 @@ function processarEDataRender() {
     renderGauge('chart-atg-ace', (metas.real_a / (metas.meta_a || 1) * 100), 'val-ace', atingIdeal);
     renderGauge('chart-atg-prt', (metas.real_p / (metas.meta_p || 1) * 100), 'val-prt', atingIdeal);
 
-    // 3. AGREGAÇÃO DINÂMICA (AQUI MORA A MÁGICA DO D06)
+    // 3. AGREGAÇÃO DINÂMICA (Sazonalidade e Mix)
     const dynSaz = { 'Seg': 0, 'Ter': 0, 'Qua': 0, 'Qui': 0, 'Sex': 0, 'Sáb': 0, 'Dom': 0 };
     const dynCat = { 'CEL': 0, 'SOM': 0, 'ACE': 0, 'PRT': 0 };
     const dynPlanos = {};
 
     baseFiltrada.forEach(loja => {
-        // Soma Sazonalidade (com trava de segurança || {})
         const sazLocal = loja.sazonalidade || {};
         Object.keys(sazLocal).forEach(dia => { if(dynSaz.hasOwnProperty(dia)) dynSaz[dia] += sazLocal[dia] || 0; });
 
-        // Soma Categorias
         const catLocal = loja.mix_categorias || {};
         Object.keys(catLocal).forEach(cat => { if(dynCat.hasOwnProperty(cat)) dynCat[cat] += catLocal[cat] || 0; });
 
-        // Soma Planos
         const planosLocal = loja.mix_planos || {};
         Object.keys(planosLocal).forEach(plano => {
             dynPlanos[plano] = (dynPlanos[plano] || 0) + (planosLocal[plano] || 0);
         });
     });
 
-    // Filtra planos vazios para a rosca
     const planosFinal = Object.fromEntries(Object.entries(dynPlanos).filter(([_, v]) => v > 0));
 
     renderSazonalidade(dynSaz);
     renderMixDonut('chart-mix-cat', dynCat, PALETAS_MIX.categorias);
     renderMixDonut('chart-mix-planos', planosFinal, PALETAS_MIX.planos);
 
+    // ==========================================
+    // [NOVO D06] INJEÇÃO DA VISÃO UNIDADES
+    // ==========================================
+    renderCardsUnidades(baseFiltrada, metas, d.tempo);
+    renderTabelaUnidades(baseFiltrada, d.tempo);
+
     document.getElementById('last-update').innerText = d.ultima_atualizacao;
 }
 
-// #* COMPONENTES DE INTERFACE (FUNÇÕES DE SUPORTE)
+// ==========================================
+// MÓDULOS DA VISÃO UNIDADES (BLOCO 3)
+// ==========================================
+
+function renderCardsUnidades(baseFiltrada, metas, tempo) {
+    const diasTotalMes = tempo?.total ?? 30;
+    const diaAtual = tempo?.dia ?? 1;
+
+    // 1. Agregações para D-1, D-2 e Constância
+    const fatDiarioRede = {};
+    const metaDiariaOriginalRede = {};
+    
+    baseFiltrada.forEach(loja => {
+        const metaGerLocal = loja.META_GERAL || 0;
+        const metaDiariaOrigLocal = metaGerLocal / diasTotalMes; 
+        
+        if (loja.historico_diario && Array.isArray(loja.historico_diario)) {
+            loja.historico_diario.forEach(diaExtrato => {
+                const data = diaExtrato.Date;
+                if (!fatDiarioRede[data]) {
+                    fatDiarioRede[data] = 0;
+                    metaDiariaOriginalRede[data] = 0;
+                }
+                fatDiarioRede[data] += diaExtrato.REALIZADO || 0;
+                metaDiariaOriginalRede[data] += metaDiariaOrigLocal;
+            });
+        }
+    });
+
+    // 2. Cálculo do D-1 e Crescimento
+    const datasOrdenadas = Object.keys(fatDiarioRede).sort((a,b) => new Date(a) - new Date(b));
+    let fatD1 = 0;
+    let fatD2 = 0;
+    let crescimento = 0;
+
+    if (datasOrdenadas.length > 0) {
+        const dataD1 = datasOrdenadas[datasOrdenadas.length - 1]; // Ontem (Último dia com dados)
+        fatD1 = fatDiarioRede[dataD1];
+        
+        if (datasOrdenadas.length > 1) {
+            const dataD2 = datasOrdenadas[datasOrdenadas.length - 2]; // Anteontem
+            fatD2 = fatDiarioRede[dataD2];
+            
+            if (fatD2 > 0) {
+                crescimento = ((fatD1 - fatD2) / fatD2) * 100;
+            }
+        }
+    }
+
+    // 3. Constância
+    let totalDiasAvaliados = 0;
+    let diasMetaBatida = 0;
+    datasOrdenadas.forEach(data => {
+        totalDiasAvaliados++;
+        if (fatDiarioRede[data] >= metaDiariaOriginalRede[data]) diasMetaBatida++;
+    });
+    const constancia = totalDiasAvaliados > 0 ? (diasMetaBatida / totalDiasAvaliados) * 100 : 0;
+
+    // 4. Esperado e Gap
+    const esperadoHoje = (metas.meta_g / diasTotalMes) * diaAtual;
+    const gapRitmo = metas.real_g - esperadoHoje;
+
+    // --- INJEÇÃO NO HTML ---
+    
+    // Card Fat D-1
+    const elFatD1 = document.querySelector('#kpi-uni-fat-d1 b');
+    const elCresc = document.getElementById('val-crescimento-d1');
+    if (elFatD1) elFatD1.innerText = fmt(fatD1);
+    if (elCresc) {
+        if (datasOrdenadas.length > 1) {
+            const icone = crescimento >= 0 ? '▲' : '▼';
+            const cor = crescimento >= 0 ? CORES.ace : CORES.prt;
+            elCresc.innerHTML = `<span style="color: ${cor}">${icone} ${Math.abs(crescimento).toFixed(1)}%</span>`;
+        } else {
+            elCresc.innerHTML = `<span style="color: var(--text-dim)">--</span>`;
+        }
+    }
+
+    // Esperado Hoje
+    const elEsperado = document.querySelector('#kpi-uni-esperado b');
+    if (elEsperado) elEsperado.innerText = fmt(esperadoHoje);
+
+    // Gap
+    const elGap = document.querySelector('#kpi-uni-gap b');
+    if (elGap) {
+        elGap.innerText = fmt(gapRitmo);
+        elGap.style.color = gapRitmo >= 0 ? CORES.ace : CORES.prt;
+    }
+
+    // Constância
+    const elConst = document.querySelector('#kpi-uni-constancia b');
+    if (elConst) {
+        elConst.innerText = `${constancia.toFixed(1)}%`;
+        if (constancia >= 80) elConst.style.color = CORES.ace;
+        else if (constancia >= 50) elConst.style.color = CORES.primary;
+        else elConst.style.color = CORES.prt;
+    }
+}
+
+function renderTabelaUnidades(baseFiltrada, tempo) {
+    const tbody = document.getElementById('tbody-unidades');
+    if (!tbody) return;
+    
+    tbody.innerHTML = ''; // Limpa a tabela para o recálculo
+    const diasRestantes = Math.max((tempo?.total ?? 30) - (tempo?.dia ?? 1), 1);
+
+    baseFiltrada.forEach(loja => {
+        const pdv = loja['NOME PDV'] || 'N/A';
+        const meta = loja.META_GERAL || 0;
+        const fat = loja.REALIZADO || 0;
+        
+        // Atingimento Geral
+        const atingGeral = meta > 0 ? (fat / meta) * 100 : 0;
+        
+        // Meta Diária Dinâmica
+        let metaDiaria = (meta - fat) / diasRestantes;
+        if (metaDiaria < 0) metaDiaria = 0; // Se já bateu a meta, a diária zera.
+
+        // Projeção
+        const projVal = loja.PROJECAO_VAL || 0;
+        const projPerc = loja.PROJECAO_PERC || 0;
+        
+        // Regra Estrita de Cores para a Projeção Valor
+        let corProj = 'var(--text-main)';
+        if (projPerc >= 100) corProj = CORES.ace; // >= 100% Verde
+        else if (projPerc >= 80) corProj = CORES.primary; // 80 a 99.99% Amarelo
+        else corProj = CORES.prt; // < 80% Vermelho
+
+        // Operacionais
+        const ticket = loja.TICKET || 0;
+        const pa = loja.PA || 0;
+
+        // Criação da Linha
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td style="font-weight: 700;">${pdv}</td>
+            <td>${fmt(meta)}</td>
+            <td>${fmt(fat)}</td>
+            <td>${atingGeral.toFixed(1)}%</td>
+            <td style="color: ${corProj}; font-weight: 800;">${fmt(projVal)}</td>
+            <td style="color: var(--text-dim);">${fmt(metaDiaria)}</td>
+            <td>${fmt(ticket)}</td>
+            <td>${pa.toFixed(2)}</td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+// ==========================================
+// FUNÇÕES AUXILIARES GERAIS
+// ==========================================
+
 function renderKpiCards(stats) {
     document.querySelector('#kpi-fat b').innerText = fmt(stats.faturamento);
     document.querySelector('#kpi-vendas b').innerText = stats.vendas.toLocaleString();
@@ -133,57 +285,17 @@ function renderSazonalidade(dados) {
 
     new Chart(ctx, {
         type: 'bar',
-        data: {
-            labels: Object.keys(dados),
-            datasets: [{
-                data: Object.values(dados),
-                backgroundColor: CORES.primary,
-                borderRadius: 4
-            }]
-        },
+        data: { labels: Object.keys(dados), datasets: [{ data: Object.values(dados), backgroundColor: CORES.primary, borderRadius: 4 }] },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            
-            // Passo C: Cria uma margem no topo do Canvas para o texto não ser decepado
-            layout: { padding: { top: 20 } },
-            
+            responsive: true, maintainAspectRatio: false, layout: { padding: { top: 20 } },
             plugins: {
                 legend: { display: false },
-                
-                // Passo A e B: Ativação, Posicionamento e Estilização
                 datalabels: { 
-                    display: true,
-                    anchor: 'end',
-                    align: 'end',
-                    color: '#888',
-                    font: { size: 10, weight: 'bold' },
-                    
-                    // Passo D: Formatação Compacta (ex: R$ 15 mil em vez de R$ 15.000)
-                    formatter: (v) => {
-                        if (v === 0) return ''; // Se não teve faturamento, não desenha o "0" para manter limpo
-                        
-                        return new Intl.NumberFormat('pt-BR', {
-                            style: 'currency',
-                            currency: 'BRL',
-                            notation: 'compact',
-                            maximumFractionDigits: 1
-                        }).format(v);
-                    }
+                    display: true, anchor: 'end', align: 'end', color: '#888', font: { size: 10, weight: 'bold' },
+                    formatter: (v) => v === 0 ? '' : new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact', maximumFractionDigits: 1 }).format(v)
                 }
             },
-            scales: {
-                y: { 
-                    grid: { color: '#1a1a1a', borderDash: [2, 2] }, 
-                    ticks: { display: false },
-                    beginAtZero: true,
-                    grace: '10%' 
-                },
-                x: { 
-                    grid: { display: false }, 
-                    ticks: { color: '#888', font: { size: 10 } } 
-                }
-            }
+            scales: { y: { grid: { color: '#1a1a1a', borderDash: [2, 2] }, ticks: { display: false }, beginAtZero: true, grace: '10%' }, x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } } }
         }
     });
 }
@@ -195,37 +307,15 @@ function renderMixDonut(id, dados, paleta) {
 
     new Chart(ctx, {
         type: 'doughnut',
-        data: { 
-            labels: Object.keys(dados), 
-            datasets: [{ 
-                data: Object.values(dados), 
-                backgroundColor: Object.keys(dados).map(chave => paleta[chave] || '#444444'), 
-                
-                borderColor: '#121212', 
-                borderWidth: 2 
-            }] 
-        },
+        data: { labels: Object.keys(dados), datasets: [{ data: Object.values(dados), backgroundColor: Object.keys(dados).map(chave => paleta[chave] || '#444444'), borderColor: '#121212', borderWidth: 2 }] },
         options: { 
-            layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } }, 
-            radius: 90,
-            cutout: 50, 
-            responsive: true, 
-            maintainAspectRatio: false,
+            layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } }, radius: 90, cutout: 50, responsive: true, maintainAspectRatio: false,
             plugins: { 
-                legend: { 
-                    position: 'bottom', 
-                    labels: { color: '#888', font: { size: 10 }, padding: 20, boxWidth: 10 } 
-                },
-                datalabels: { 
-                    anchor: 'end', 
-                    align: 'end', 
-                    offset: 8, 
-                    color: '#fff', 
-                    font: { size: 10, weight: 'bold' },
+                legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 20, boxWidth: 10 } },
+                datalabels: { anchor: 'end', align: 'end', offset: 8, color: '#fff', font: { size: 10, weight: 'bold' },
                     formatter: (v, ctx) => { 
                         const total = ctx.dataset.data.reduce((a, b) => a + b, 0); 
                         if (total === 0) return '';
-                        
                         const perc = (v / total) * 100;
                         return perc >= 2 ? perc.toFixed(1) + '%' : ''; 
                     }
@@ -283,22 +373,17 @@ function iniciarRoteamento() {
     const secoes = document.querySelectorAll('.view-section');
     const tituloPagina = document.getElementById('current-view-title');
     
-    // Captura os containers dos filtros específicos do Topo
     const filtroLoja = document.getElementById('container-filtro-loja');
     const filtroData = document.getElementById('container-filtro-data');
 
-    // Função interna que aplica as regras estritas do cabeçalho
     function aplicarRegraDeFiltros(targetId) {
         if (targetId === 'visao-geral') {
-            // Visão Geral: Mostra Loja, Esconde Data
             if (filtroLoja) filtroLoja.style.display = 'flex';
             if (filtroData) filtroData.style.display = 'none';
         } else if (targetId === 'visao-unidades') {
-            // Visão Unidades: Esconde Loja, Mostra Data
             if (filtroLoja) filtroLoja.style.display = 'none';
             if (filtroData) filtroData.style.display = 'flex';
         } else {
-            // Fallback preventivo
             if (filtroLoja) filtroLoja.style.display = 'none';
             if (filtroData) filtroData.style.display = 'none';
         }
@@ -306,31 +391,25 @@ function iniciarRoteamento() {
 
     botoesMenu.forEach(botao => {
         botao.addEventListener('click', () => {
-            // 1. Limpeza de estados ativos
             botoesMenu.forEach(b => b.classList.remove('active'));
             secoes.forEach(s => s.classList.remove('active'));
 
-            // 2. Acende o botão atual
             botao.classList.add('active');
 
-            // 3. Exibe a seção correspondente
             const targetId = botao.getAttribute('data-target');
             const targetSection = document.getElementById(targetId);
             if (targetSection) {
                 targetSection.classList.add('active');
             }
 
-            // 4. Atualiza Título do Cabeçalho
             const textoBotao = botao.querySelector('.nav-text');
             if (textoBotao) {
                 tituloPagina.innerText = textoBotao.innerText;
             }
 
-            // 5. Executa a troca mágica de Filtros
             aplicarRegraDeFiltros(targetId);
         });
     });
 
-    // Força a aplicação da regra inicial assim que a página carrega
     aplicarRegraDeFiltros('visao-geral');
 }
