@@ -139,7 +139,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 
 #last-update{
     color: #fff;
-    font-family: var(--font-heading); /* Destaca a data/hora */
+    font-family: var(--font-heading);
 }
 
 .header-left .sub-info {
@@ -152,17 +152,24 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 
 .divider { color: var(--primary); }
 
+/* ========================================= */
+/* SISTEMA SPA: CONTROLE DE SEÇÕES [D02]     */
+/* ========================================= */
 .view-section {
     height: calc(100vh - 60px);
     padding: 10px;
-    display: flex;
+    display: none; /* Esconde todas por padrão */
     flex-direction: column;
     gap: 10px;
     overflow: hidden;
 }
 
+.view-section.active {
+    display: flex; /* Mostra apenas a seção ativa */
+}
+
 /* ========================================= */
-/* ESTRUTURA DOS KPIS BÁSICOS (D09 + D10)    */
+/* ESTRUTURA DOS KPIS BÁSICOS                */
 /* ========================================= */
 .kpi-grid {
     display: grid;
@@ -203,7 +210,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 .kpi-data b {
     font-size: 12px;
     color: var(--text-main);
-    font-weight: 800; /* Outfit fica excelente com peso alto */
+    font-weight: 800; 
 }
 
 /* ========================================= */
@@ -287,7 +294,7 @@ canvas {
 }
 
 /* ========================================= */
-/* FILTROS GLOBAIS                           */
+/* FILTROS GLOBAIS E INPUTS DE DATA          */
 /* ========================================= */
 .global-filters {
     display: flex;
@@ -297,6 +304,7 @@ canvas {
     color: #666;
     font-weight: 800;
     text-align: center;
+    align-items: center;
 }
 
 .filter-group {
@@ -333,21 +341,31 @@ canvas {
 
 .filter-group select:focus { outline: 1px solid var(--primary); }
 
+.date-input {
+    background-color: var(--bg-card);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-family: var(--font-body);
+    font-size: 0.85rem;
+    color-scheme: dark;
+    outline: none;
+}
+
+.date-input:focus { border-color: var(--primary); }
+
 /* ========================================= */
-/* MEDIA QUERIES (RESPONSIVIDADE)            */
+/* MEDIA QUERIES (RESPONSIVIDADE AJUSTADA)   */
 /* ========================================= */
 @media (max-width: 1280px) {
-    .main-charts-row {
-        grid-template-columns: 1fr 1fr;
-    }
+    .main-charts-row { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 1024px) {
     body { overflow-y: auto; }
-
-    .view-section {
-        height: auto;
-    }
+    
+    .view-section { height: auto; }
 
     .main-charts-row,
     .atingimento-row {
@@ -355,11 +373,29 @@ canvas {
         height: auto;
     }
 
-    .kpi-grid {
+    .kpi-grid { height: auto; }
+}
+
+/* Celulares grandes e tablets pequenos */
+@media (max-width: 768px) {
+    .top-header {
+        flex-direction: column;
         height: auto;
+        padding: 15px;
+        gap: 15px;
+    }
+
+    .header-left { width: 100%; justify-content: center; }
+    
+    .header-right { width: 100%; }
+    
+    .global-filters {
+        justify-content: center;
+        width: 100%;
     }
 }
 
+/* Celulares Padrão */
 @media (max-width: 600px) {
     .sidebar { display: none; }
 
@@ -368,7 +404,20 @@ canvas {
         width: 100vw;
     }
 
-    .kpi-grid {
-        grid-template-columns: 1fr;
+    .kpi-grid { grid-template-columns: 1fr; }
+    
+    .view-local-header {
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+    }
+
+    .date-input {
+        width: 100%; /* Facilita o toque na tela do celular */
+    }
+    
+    .filter-group > div {
+        flex-direction: column; /* Coloca Data Inicial em cima da Final no mobile */
+        width: 100%;
     }
 }

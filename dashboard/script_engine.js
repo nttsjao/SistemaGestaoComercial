@@ -35,6 +35,9 @@ document.addEventListener('DOMContentLoaded', () => {
     atualizarRelogio();
     setInterval(atualizarRelogio, 1000);
     setTimeout(() => processarEDataRender(), 150);
+    
+    // [NOVO D03] Aciona o gatilho de navegação SPA e gerenciamento de filtros
+    iniciarRoteamento();
 });
 
 window.addEventListener('resize', () => processarEDataRender());
@@ -204,7 +207,7 @@ function renderMixDonut(id, dados, paleta) {
         },
         options: { 
             layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } }, 
-            radius: 95,
+            radius: 90,
             cutout: 50, 
             responsive: true, 
             maintainAspectRatio: false,
@@ -224,7 +227,7 @@ function renderMixDonut(id, dados, paleta) {
                         if (total === 0) return '';
                         
                         const perc = (v / total) * 100;
-                        return perc >= 1 ? perc.toFixed(1) + '%' : ''; 
+                        return perc >= 2 ? perc.toFixed(1) + '%' : ''; 
                     }
                 }
             }
@@ -271,3 +274,63 @@ function configurarEventosFiltro() {
 
 function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(v); }
 function atualizarRelogio() { const el = document.getElementById('relogio'); if (el) el.innerText = new Date().toLocaleTimeString(); }
+
+// ==========================================
+// [D03] SISTEMA DE ROTEAMENTO SPA E FILTROS
+// ==========================================
+function iniciarRoteamento() {
+    const botoesMenu = document.querySelectorAll('.nav-item[data-target]');
+    const secoes = document.querySelectorAll('.view-section');
+    const tituloPagina = document.getElementById('current-view-title');
+    
+    // Captura os containers dos filtros específicos do Topo
+    const filtroLoja = document.getElementById('container-filtro-loja');
+    const filtroData = document.getElementById('container-filtro-data');
+
+    // Função interna que aplica as regras estritas do cabeçalho
+    function aplicarRegraDeFiltros(targetId) {
+        if (targetId === 'visao-geral') {
+            // Visão Geral: Mostra Loja, Esconde Data
+            if (filtroLoja) filtroLoja.style.display = 'flex';
+            if (filtroData) filtroData.style.display = 'none';
+        } else if (targetId === 'visao-unidades') {
+            // Visão Unidades: Esconde Loja, Mostra Data
+            if (filtroLoja) filtroLoja.style.display = 'none';
+            if (filtroData) filtroData.style.display = 'flex';
+        } else {
+            // Fallback preventivo
+            if (filtroLoja) filtroLoja.style.display = 'none';
+            if (filtroData) filtroData.style.display = 'none';
+        }
+    }
+
+    botoesMenu.forEach(botao => {
+        botao.addEventListener('click', () => {
+            // 1. Limpeza de estados ativos
+            botoesMenu.forEach(b => b.classList.remove('active'));
+            secoes.forEach(s => s.classList.remove('active'));
+
+            // 2. Acende o botão atual
+            botao.classList.add('active');
+
+            // 3. Exibe a seção correspondente
+            const targetId = botao.getAttribute('data-target');
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                targetSection.classList.add('active');
+            }
+
+            // 4. Atualiza Título do Cabeçalho
+            const textoBotao = botao.querySelector('.nav-text');
+            if (textoBotao) {
+                tituloPagina.innerText = textoBotao.innerText;
+            }
+
+            // 5. Executa a troca mágica de Filtros
+            aplicarRegraDeFiltros(targetId);
+        });
+    });
+
+    // Força a aplicação da regra inicial assim que a página carrega
+    aplicarRegraDeFiltros('visao-geral');
+}

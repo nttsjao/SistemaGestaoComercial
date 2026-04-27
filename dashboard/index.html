@@ -21,11 +21,11 @@
         </div>
 
         <nav class="sidebar-nav">
-            <button class="nav-item active" title="Visão Geral">
+            <button class="nav-item active" data-target="visao-geral" title="Visão Geral">
                 <span class="material-symbols-outlined">dashboard</span>
                 <span class="nav-text">Visão Geral</span>
             </button>
-            <button class="nav-item" title="Unidades">
+            <button class="nav-item" data-target="visao-unidades" title="Unidades">
                 <span class="material-symbols-outlined">store</span>
                 <span class="nav-text">Unidades</span>
             </button>
@@ -66,12 +66,22 @@
 
             <div class="header-right">
                 <div class="global-filters">
-                    <div class="filter-group">
+                    
+                    <div class="filter-group" id="container-filtro-loja">
                         <label>Loja</label>
                         <select id="filter-loja">
                             <option value="ALL">Todas</option>
                         </select>
                     </div>
+
+                    <div class="filter-group" id="container-filtro-data">
+                        <label>Período</label>
+                        <div style="display: flex; gap: 5px;">
+                            <input type="date" id="filter-date-start" class="date-input">
+                            <input type="date" id="filter-date-end" class="date-input">
+                        </div>
+                    </div>
+
                     <div class="filter-group">
                         <label>Modelo</label>
                         <select id="filter-modelo">
@@ -88,12 +98,13 @@
                             <option value="FRANQUIA">FRANQUIA</option>
                         </select>
                     </div>
+                    
                 </div>
             </div>
         </header>
 
         <div id="view-container">
-            <section id="visao-1" class="view-section active">
+            <section id="visao-geral" class="view-section active">
                 
                 <div class="kpi-grid">
                     <div class="kpi-card" id="kpi-fat">
@@ -164,6 +175,13 @@
                 </div>
 
             </section>
+
+            <section id="visao-unidades" class="view-section">
+                <div style="display: flex; justify-content: center; align-items: center; flex: 1; color: #888888;">
+                    <h2>Visão Tabular (Unidades) em Construção...</h2>
+                </div>
+            </section>
+
         </div>
     </main>
 
