@@ -98,14 +98,13 @@
                             <option value="FRANQUIA">FRANQUIA</option>
                         </select>
                     </div>
-                    
                 </div>
             </div>
         </header>
 
         <div id="view-container">
+            
             <section id="visao-geral" class="view-section active">
-                
                 <div class="kpi-grid">
                     <div class="kpi-card" id="kpi-fat">
                         <span class="material-symbols-outlined">payments</span>
@@ -173,12 +172,71 @@
                         </div>
                     </div>
                 </div>
-
             </section>
 
             <section id="visao-unidades" class="view-section">
-                <div style="display: flex; justify-content: center; align-items: center; flex: 1; color: #888888;">
-                    <h2>Visão Tabular (Unidades) em Construção...</h2>
+                
+                <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
+                    
+                    <div class="kpi-card" id="kpi-uni-fat-d1">
+                        <span class="material-symbols-outlined">history_toggle_off</span>
+                        <div class="kpi-data">
+                            <span>Fat. Ontem</span>
+                            <b>R$ 0</b>
+                            <span id="val-crescimento-d1" style="font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; gap: 2px;">
+                                --
+                            </span>
+                        </div>
+                    </div>
+
+                    <div class="kpi-card" id="kpi-uni-esperado">
+                        <span class="material-symbols-outlined">event_available</span>
+                        <div class="kpi-data"><span>Esperado Hoje</span><b>R$ 0</b></div>
+                    </div>
+                    
+                    <div class="kpi-card" id="kpi-uni-gap">
+                        <span class="material-symbols-outlined">warning</span>
+                        <div class="kpi-data"><span>Gap de Ritmo</span><b>R$ 0</b></div>
+                    </div>
+                    
+                    <div class="kpi-card" id="kpi-uni-constancia">
+                        <span class="material-symbols-outlined">vital_signs</span>
+                        <div class="kpi-data"><span>Constância</span><b>0%</b></div>
+                    </div>
+                </div>
+
+                <div class="main-charts-row" style="grid-template-columns: 1fr 1fr; height: 35%;">
+                    <div class="chart-box" id="box-hibrido-modelo">
+                        <h3 class="chart-label">Performance por Modelo</h3>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-hibrido-modelo"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-box" id="box-hibrido-gestao">
+                        <h3 class="chart-label">Performance por Gestão</h3>
+                        <div class="canvas-wrapper">
+                            <canvas id="chart-hibrido-gestao"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table id="tabela-unidades" class="data-table">
+                        <thead>
+                            <tr>
+                                <th data-sort="loja">PDV <span class="sort-icon"></span></th>
+                                <th data-sort="meta">Meta <span class="sort-icon"></span></th>
+                                <th data-sort="faturamento">Faturamento <span class="sort-icon"></span></th>
+                                <th data-sort="ating_geral">Ating. Geral <span class="sort-icon"></span></th>
+                                <th data-sort="projecao_val">Projeção Valor <span class="sort-icon"></span></th>
+                                <th data-sort="meta_diaria">Meta Diária <span class="sort-icon"></span></th>
+                                <th data-sort="ticket">Ticket Médio <span class="sort-icon"></span></th>
+                                <th data-sort="pa">P.A. <span class="sort-icon"></span></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbody-unidades">
+                            </tbody>
+                    </table>
                 </div>
             </section>
 

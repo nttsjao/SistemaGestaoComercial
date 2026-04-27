@@ -35,7 +35,7 @@ body {
     display: flex;
     height: 100vh;
     width: 100vw;
-    overflow: hidden; /* TRAVA A TELA NO NOTEBOOK */
+    overflow: hidden; /* Mantém a tela fixa no notebook */
 }
 
 h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
@@ -114,7 +114,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* TRAVA A TELA NO NOTEBOOK */
+    overflow: hidden; /* Fixa no Desktop */
 }
 
 .top-header {
@@ -135,7 +135,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 .divider { color: var(--primary); }
 
 /* ========================================= */
-/* SISTEMA SPA: CONTROLE DE SEÇÕES           */
+/* SISTEMA SPA: CONTROLE DE SEÇÕES [D02]     */
 /* ========================================= */
 .view-section {
     height: calc(100vh - 60px);
@@ -143,7 +143,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     display: none; 
     flex-direction: column;
     gap: 10px;
-    overflow: hidden; /* TRAVA A TELA NO NOTEBOOK */
+    overflow: hidden; 
 }
 .view-section.active { display: flex; }
 
@@ -222,7 +222,6 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     font-size: 12px;
     color: #666;
     font-weight: 800;
-    text-align: center;
     align-items: center;
 }
 
@@ -258,14 +257,14 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
 .date-input:focus { border-color: var(--primary); }
 
 /* ========================================= */
-/* TABELA DE UNIDADES (VISÃO TABULAR)        */
+/* TABELA DE UNIDADES (VISÃO TABULAR) [D05]  */
 /* ========================================= */
 .table-container {
     flex: 1;
     background: var(--bg-card);
     border-radius: 12px;
     border: 1px solid var(--border);
-    overflow: auto; /* Permite rolar a tabela internamente no desktop */
+    overflow: auto; 
     min-height: 0;
 }
 
@@ -287,10 +286,7 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     top: 0;
     z-index: 10;
     border-bottom: 1px solid var(--border);
-    cursor: pointer;
 }
-
-.data-table th:hover { color: var(--text-main); }
 
 .data-table td {
     padding: 12px 15px;
@@ -298,41 +294,34 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     color: var(--text-main);
 }
 
-.data-table tbody tr:hover { background-color: rgba(255, 255, 255, 0.02); }
-
-.data-table .farol {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-weight: 700;
-}
-.data-table .farol-icon { font-size: 16px; }
+.data-table tbody tr:hover { background-color: rgba(255, 255, 255, 0.05); }
 
 /* ========================================= */
-/* MEDIA QUERIES (LIBERANDO O CELULAR)       */
+/* MEDIA QUERIES (RESPONSIVIDADE MASTER)     */
 /* ========================================= */
 
+/* Notebooks médios */
 @media (max-width: 1280px) {
     .main-charts-row { grid-template-columns: 1fr 1fr; }
 }
 
-/* TABLETS E CELULARES: TELA DESBLOQUEADA */
+/* Tablets e Celulares - DESBLOQUEIA ROLAGEM */
 @media (max-width: 1024px) {
     body { 
-        overflow-y: auto; /* LIBERA A ROLAGEM GERAL */
+        overflow-y: auto; 
         overflow-x: hidden; 
     }
     
     .main-content {
         height: auto;
         min-height: 100vh;
-        overflow-y: visible; /* DESBLOQUEIA */
+        overflow-y: visible;
     }
     
     .view-section { 
         height: auto; 
         min-height: 100vh;
-        overflow-y: visible; /* DESBLOQUEIA */
+        overflow-y: visible; 
     }
 
     .main-charts-row,
@@ -344,6 +333,7 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     .kpi-grid { height: auto; }
 }
 
+/* iPads e Celulares grandes */
 @media (max-width: 768px) {
     .top-header { flex-direction: column; height: auto; padding: 15px; gap: 15px; }
     .header-left { width: 100%; justify-content: center; }
@@ -351,21 +341,17 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     .global-filters { justify-content: center; width: 100%; }
 }
 
-/* CELULAR ESTREITO (IPHONE - VIEWPORT 390X844) */
+/* Celulares (iPhone 390x844) */
 @media (max-width: 600px) {
     .sidebar { display: none; }
     .main-content { margin-left: 0; width: 100vw; }
     
-    /* Força KPIs a caírem em coluna para não espremer no mobile */
     .kpi-grid,
     #visao-unidades .kpi-grid { 
         grid-template-columns: 1fr !important; 
     }
 
-    /* Gráficos ganham altura mínima para não sumirem da tela */
     .chart-box { min-height: 320px; }
     .gauge-box { min-height: 250px; }
-    
-    /* Container da tabela no celular ganha altura extra */
     .table-container { min-height: 400px; }
 }
