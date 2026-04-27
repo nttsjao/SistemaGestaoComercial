@@ -41,7 +41,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 window.addEventListener('resize', () => processarEDataRender());
 
-// #* MOTOR DE FILTRAGEM GLOBAL
+// ==========================================
+// MOTOR DE FILTRAGEM GLOBAL
+// ==========================================
 function filtrarBase(base) {
     if (!base) return [];
     return base.filter(item => {
@@ -57,13 +59,15 @@ function filtrarBase(base) {
     });
 }
 
-// #* PROCESSAMENTO PRINCIPAL (GATILHO DE RENDERIZAÇÃO)
+// ==========================================
+// PROCESSAMENTO PRINCIPAL
+// ==========================================
 function processarEDataRender() {
     const d = dadosDashboard;
     const baseFiltrada = filtrarBase(d.unidades);
     const atingIdeal = d.tempo?.ideal ?? 0;
 
-    // 1. Acumuladores de KPI (Visão Geral)
+    // --- VISÃO GERAL ---
     const stats = baseFiltrada.reduce((acc, curr) => {
         acc.faturamento += curr.REALIZADO || 0;
         acc.vendas += curr.N_VENDAS || 0;
@@ -73,7 +77,6 @@ function processarEDataRender() {
 
     renderKpiCards(stats);
 
-    // 2. Acumuladores de Metas (Visão Geral)
     const metas = baseFiltrada.reduce((acc, curr) => {
         acc.real_g += curr.REALIZADO || 0; acc.meta_g += curr.META_GERAL || 0;
         acc.real_a += curr.ACE || 0; acc.meta_a += curr.META_ACE || 0;
@@ -85,7 +88,6 @@ function processarEDataRender() {
     renderGauge('chart-atg-ace', (metas.real_a / (metas.meta_a || 1) * 100), 'val-ace', atingIdeal);
     renderGauge('chart-atg-prt', (metas.real_p / (metas.meta_p || 1) * 100), 'val-prt', atingIdeal);
 
-    // 3. AGREGAÇÃO DINÂMICA (Sazonalidade e Mix)
     const dynSaz = { 'Seg': 0, 'Ter': 0, 'Qua': 0, 'Qui': 0, 'Sex': 0, 'Sáb': 0, 'Dom': 0 };
     const dynCat = { 'CEL': 0, 'SOM': 0, 'ACE': 0, 'PRT': 0 };
     const dynPlanos = {};
@@ -109,24 +111,22 @@ function processarEDataRender() {
     renderMixDonut('chart-mix-cat', dynCat, PALETAS_MIX.categorias);
     renderMixDonut('chart-mix-planos', planosFinal, PALETAS_MIX.planos);
 
-    // ==========================================
-    // [NOVO D06] INJEÇÃO DA VISÃO UNIDADES
-    // ==========================================
+    // --- VISÃO UNIDADES ---
     renderCardsUnidades(baseFiltrada, metas, d.tempo);
+    renderGraficosHibridos(baseFiltrada); // [NOVO D07]
     renderTabelaUnidades(baseFiltrada, d.tempo);
 
     document.getElementById('last-update').innerText = d.ultima_atualizacao;
 }
 
 // ==========================================
-// MÓDULOS DA VISÃO UNIDADES (BLOCO 3)
+// MÓDULOS DA VISÃO UNIDADES
 // ==========================================
 
 function renderCardsUnidades(baseFiltrada, metas, tempo) {
     const diasTotalMes = tempo?.total ?? 30;
     const diaAtual = tempo?.dia ?? 1;
 
-    // 1. Agregações para D-1, D-2 e Constância
     const fatDiarioRede = {};
     const metaDiariaOriginalRede = {};
     
@@ -147,18 +147,17 @@ function renderCardsUnidades(baseFiltrada, metas, tempo) {
         }
     });
 
-    // 2. Cálculo do D-1 e Crescimento
     const datasOrdenadas = Object.keys(fatDiarioRede).sort((a,b) => new Date(a) - new Date(b));
     let fatD1 = 0;
     let fatD2 = 0;
     let crescimento = 0;
 
     if (datasOrdenadas.length > 0) {
-        const dataD1 = datasOrdenadas[datasOrdenadas.length - 1]; // Ontem (Último dia com dados)
+        const dataD1 = datasOrdenadas[datasOrdenadas.length - 1]; 
         fatD1 = fatDiarioRede[dataD1];
         
         if (datasOrdenadas.length > 1) {
-            const dataD2 = datasOrdenadas[datasOrdenadas.length - 2]; // Anteontem
+            const dataD2 = datasOrdenadas[datasOrdenadas.length - 2]; 
             fatD2 = fatDiarioRede[dataD2];
             
             if (fatD2 > 0) {
@@ -167,7 +166,6 @@ function renderCardsUnidades(baseFiltrada, metas, tempo) {
         }
     }
 
-    // 3. Constância
     let totalDiasAvaliados = 0;
     let diasMetaBatida = 0;
     datasOrdenadas.forEach(data => {
@@ -176,13 +174,9 @@ function renderCardsUnidades(baseFiltrada, metas, tempo) {
     });
     const constancia = totalDiasAvaliados > 0 ? (diasMetaBatida / totalDiasAvaliados) * 100 : 0;
 
-    // 4. Esperado e Gap
     const esperadoHoje = (metas.meta_g / diasTotalMes) * diaAtual;
     const gapRitmo = metas.real_g - esperadoHoje;
 
-    // --- INJEÇÃO NO HTML ---
-    
-    // Card Fat D-1
     const elFatD1 = document.querySelector('#kpi-uni-fat-d1 b');
     const elCresc = document.getElementById('val-crescimento-d1');
     if (elFatD1) elFatD1.innerText = fmt(fatD1);
@@ -196,18 +190,15 @@ function renderCardsUnidades(baseFiltrada, metas, tempo) {
         }
     }
 
-    // Esperado Hoje
     const elEsperado = document.querySelector('#kpi-uni-esperado b');
     if (elEsperado) elEsperado.innerText = fmt(esperadoHoje);
 
-    // Gap
     const elGap = document.querySelector('#kpi-uni-gap b');
     if (elGap) {
         elGap.innerText = fmt(gapRitmo);
         elGap.style.color = gapRitmo >= 0 ? CORES.ace : CORES.prt;
     }
 
-    // Constância
     const elConst = document.querySelector('#kpi-uni-constancia b');
     if (elConst) {
         elConst.innerText = `${constancia.toFixed(1)}%`;
@@ -217,11 +208,145 @@ function renderCardsUnidades(baseFiltrada, metas, tempo) {
     }
 }
 
+// ==========================================
+// [D07] GRÁFICOS HÍBRIDOS
+// ==========================================
+function renderGraficosHibridos(baseFiltrada) {
+    // --- DADOS PARA GRÁFICO 1 (MODELO: COMBO BARRAS + LINHA) ---
+    const dadosModelo = {
+        'LOJA': { fat: 0, meta: 0 },
+        'QUIOSQUE': { fat: 0, meta: 0 }
+    };
+
+    baseFiltrada.forEach(loja => {
+        const id = Number(loja['ID TIPO']);
+        const modelo = (id === 1 || id === 2) ? 'LOJA' : 'QUIOSQUE';
+        dadosModelo[modelo].fat += loja.REALIZADO || 0;
+        dadosModelo[modelo].meta += loja.META_GERAL || 0;
+    });
+
+    const labelsModelo = Object.keys(dadosModelo);
+    const faturamentoModelo = labelsModelo.map(m => dadosModelo[m].fat);
+    const atingimentoModelo = labelsModelo.map(m => (dadosModelo[m].meta > 0 ? (dadosModelo[m].fat / dadosModelo[m].meta) * 100 : 0));
+
+    renderComboModelo('chart-hibrido-modelo', labelsModelo, faturamentoModelo, atingimentoModelo);
+
+    // --- DADOS PARA GRÁFICO 2 (GESTÃO: SÉRIE TEMPORAL / LINHAS) ---
+    const timelinePropria = {};
+    const timelineFranquia = {};
+
+    baseFiltrada.forEach(loja => {
+        const id = Number(loja['ID TIPO']);
+        const gestao = (id === 1 || id === 3) ? 'PRÓPRIA' : 'FRANQUIA';
+        
+        if (loja.historico_diario && Array.isArray(loja.historico_diario)) {
+            loja.historico_diario.forEach(dia => {
+                const dataStr = dia.Date; 
+                if (gestao === 'PRÓPRIA') {
+                    timelinePropria[dataStr] = (timelinePropria[dataStr] || 0) + (dia.REALIZADO || 0);
+                } else {
+                    timelineFranquia[dataStr] = (timelineFranquia[dataStr] || 0) + (dia.REALIZADO || 0);
+                }
+            });
+        }
+    });
+
+    const datasOrdenadas = Object.keys({...timelinePropria, ...timelineFranquia}).sort((a,b) => new Date(a) - new Date(b));
+    const datasetPropria = datasOrdenadas.map(d => timelinePropria[d] || 0);
+    const datasetFranquia = datasOrdenadas.map(d => timelineFranquia[d] || 0);
+    
+    const labelsDatas = datasOrdenadas.map(d => d.split('-')[2]);
+
+    renderLinhasGestao('chart-hibrido-gestao', labelsDatas, datasetPropria, datasetFranquia);
+}
+
+function renderComboModelo(id, labels, dataFat, dataAting) {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
+
+    new Chart(ctx, {
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    type: 'bar',
+                    label: 'Faturamento',
+                    data: dataFat,
+                    backgroundColor: '#895129',
+                    borderRadius: 4,
+                    yAxisID: 'y',
+                    order: 2
+                },
+                {
+                    type: 'line',
+                    label: 'Atingimento %',
+                    data: dataAting,
+                    borderColor: '#fff',
+                    borderWidth: 2,
+                    pointBackgroundColor: CORES.ace,
+                    tension: 0.4,
+                    yAxisID: 'y1',
+                    order: 1,
+                    datalabels: { align: 'top', formatter: (v) => v.toFixed(1) + '%' }
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                datalabels: {
+                    color: '#c6c6c6', font: { size: 10, weight: 'bold' },
+                    formatter: (v, context) => {
+                        if (context.dataset.type === 'line') return v.toFixed(1) + '%';
+                        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(v);
+                    }
+                }
+            },
+            scales: {
+                y: { display: false, position: 'left' },
+                y1: { display: false, position: 'right', min: 0, max: Math.max(...dataAting) + 20 },
+                x: { grid: { display: false }, ticks: { color: '#888', font: { size: 10 } } }
+            }
+        }
+    });
+}
+
+function renderLinhasGestao(id, labels, dataPropria, dataFranquia) {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    if (Chart.getChart(ctx)) Chart.getChart(ctx).destroy();
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                { label: 'PRÓPRIA', data: dataPropria, borderColor: CORES.primary, borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false },
+                { label: 'FRANQUIA', data: dataFranquia, borderColor: '#555', borderWidth: 2, pointRadius: 0, tension: 0.3, fill: false }
+            ]
+        },
+        options: {
+            responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { display: true, position: 'top', align: 'end', labels: { color: '#888', boxWidth: 10, font: { size: 10 } } },
+                datalabels: { display: false } 
+            },
+            scales: {
+                y: { display: true, grid: { color: '#1a1a1a' }, ticks: { color: '#444', font: { size: 8 }, callback: (v) => 'R$ ' + (v/1000) + 'k' } },
+                x: { grid: { display: false }, ticks: { color: '#888', font: { size: 9 } } }
+            }
+        }
+    });
+}
+
 function renderTabelaUnidades(baseFiltrada, tempo) {
     const tbody = document.getElementById('tbody-unidades');
     if (!tbody) return;
     
-    tbody.innerHTML = ''; // Limpa a tabela para o recálculo
+    tbody.innerHTML = ''; 
     const diasRestantes = Math.max((tempo?.total ?? 30) - (tempo?.dia ?? 1), 1);
 
     baseFiltrada.forEach(loja => {
@@ -229,28 +354,22 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         const meta = loja.META_GERAL || 0;
         const fat = loja.REALIZADO || 0;
         
-        // Atingimento Geral
         const atingGeral = meta > 0 ? (fat / meta) * 100 : 0;
         
-        // Meta Diária Dinâmica
         let metaDiaria = (meta - fat) / diasRestantes;
-        if (metaDiaria < 0) metaDiaria = 0; // Se já bateu a meta, a diária zera.
+        if (metaDiaria < 0) metaDiaria = 0; 
 
-        // Projeção
         const projVal = loja.PROJECAO_VAL || 0;
         const projPerc = loja.PROJECAO_PERC || 0;
         
-        // Regra Estrita de Cores para a Projeção Valor
         let corProj = 'var(--text-main)';
-        if (projPerc >= 100) corProj = CORES.ace; // >= 100% Verde
-        else if (projPerc >= 80) corProj = CORES.primary; // 80 a 99.99% Amarelo
-        else corProj = CORES.prt; // < 80% Vermelho
+        if (projPerc >= 100) corProj = CORES.ace; 
+        else if (projPerc >= 80) corProj = CORES.primary; 
+        else corProj = CORES.prt; 
 
-        // Operacionais
         const ticket = loja.TICKET || 0;
         const pa = loja.PA || 0;
 
-        // Criação da Linha
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-weight: 700;">${pdv}</td>
@@ -366,7 +485,7 @@ function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', cur
 function atualizarRelogio() { const el = document.getElementById('relogio'); if (el) el.innerText = new Date().toLocaleTimeString(); }
 
 // ==========================================
-// [D03] SISTEMA DE ROTEAMENTO SPA E FILTROS
+// ROTEAMENTO SPA
 // ==========================================
 function iniciarRoteamento() {
     const botoesMenu = document.querySelectorAll('.nav-item[data-target]');
