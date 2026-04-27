@@ -15,9 +15,9 @@
     --success: #2ecc71;
     --danger: #ff4d4d;
     
-    /* Tipografia (Missão D10) */
-    --font-heading: 'Outfit', sans-serif; /* Títulos e Valores Numéricos */
-    --font-body: 'DM Sans', sans-serif;   /* Textos gerais e legendas */
+    /* Tipografia */
+    --font-heading: 'Outfit', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
     
     /* Animações */
     --transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -25,23 +25,26 @@
 
 * { box-sizing: border-box; margin: 0; padding: 0; outline: none; }
 
+/* ========================================= */
+/* BASE DESKTOP (NOTEBOOK) - TELA FIXA       */
+/* ========================================= */
 body {
     background-color: var(--bg-dark);
     color: var(--text-main);
-    font-family: var(--font-body); /* Aplicação da fonte de corpo */
+    font-family: var(--font-body);
     display: flex;
     height: 100vh;
     width: 100vw;
-    overflow: hidden;
+    overflow: hidden; /* TRAVA A TELA NO NOTEBOOK */
 }
 
-/* ========================================= */
-/* TIPOGRAFIA DE DESTAQUE (Títulos e Números)*/
-/* ========================================= */
 h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     font-family: var(--font-heading);
 }
 
+/* ========================================= */
+/* MENU LATERAL                              */
+/* ========================================= */
 .sidebar {
     width: var(--sidebar-width);
     height: 100vh;
@@ -63,11 +66,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     padding-left: 20px;
 }
 
-.logo { 
-    font-size: 1.6rem; 
-    font-weight: 800; 
-    color: var(--primary); 
-}
+.logo { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
 .logo span { color: #fff; }
 
 .sidebar-nav { flex: 1; margin-top: 20px; }
@@ -106,13 +105,16 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 .user-name { display: block; font-size: 0.8rem; font-weight: 600; }
 .user-role { font-size: 0.65rem; color: var(--text-dim); }
 
+/* ========================================= */
+/* ESTRUTURA PRINCIPAL E CABEÇALHO           */
+/* ========================================= */
 .main-content {
     margin-left: var(--sidebar-width);
     width: calc(100vw - var(--sidebar-width));
     height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    overflow: hidden; /* TRAVA A TELA NO NOTEBOOK */
 }
 
 .top-header {
@@ -126,50 +128,27 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     background: #000;
 }
 
-.header-left {
-    display: flex;
-    align-items: center;
-    gap: 25px;
-}
-
-.header-left h1 {
-    font-size: 1.4rem;
-    font-weight: 800;
-}
-
-#last-update{
-    color: #fff;
-    font-family: var(--font-heading);
-}
-
-.header-left .sub-info {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    font-size: 0.75rem;
-    color: var(--primary);
-}
-
+.header-left { display: flex; align-items: center; gap: 25px; }
+.header-left h1 { font-size: 1.4rem; font-weight: 800; }
+#last-update{ color: #fff; font-family: var(--font-heading); }
+.header-left .sub-info { display: flex; align-items: center; gap: 10px; font-size: 0.75rem; color: var(--primary); }
 .divider { color: var(--primary); }
 
 /* ========================================= */
-/* SISTEMA SPA: CONTROLE DE SEÇÕES [D02]     */
+/* SISTEMA SPA: CONTROLE DE SEÇÕES           */
 /* ========================================= */
 .view-section {
     height: calc(100vh - 60px);
     padding: 10px;
-    display: none; /* Esconde todas por padrão */
+    display: none; 
     flex-direction: column;
     gap: 10px;
-    overflow: hidden;
+    overflow: hidden; /* TRAVA A TELA NO NOTEBOOK */
 }
-
-.view-section.active {
-    display: flex; /* Mostra apenas a seção ativa */
-}
+.view-section.active { display: flex; }
 
 /* ========================================= */
-/* ESTRUTURA DOS KPIS BÁSICOS                */
+/* KPIS BÁSICOS                              */
 /* ========================================= */
 .kpi-grid {
     display: grid;
@@ -188,30 +167,10 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     gap: 12px; 
 }
 
-.kpi-card .material-symbols-outlined {
-    font-size: 24px;
-    color: var(--primary);
-}
-
-.kpi-data {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 2px;
-}
-
-.kpi-data span {
-    font-size: 10px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    font-weight: 600;
-}
-
-.kpi-data b {
-    font-size: 12px;
-    color: var(--text-main);
-    font-weight: 800; 
-}
+.kpi-card .material-symbols-outlined { font-size: 24px; color: var(--primary); }
+.kpi-data { display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+.kpi-data span { font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; }
+.kpi-data b { font-size: 12px; color: var(--text-main); font-weight: 800; }
 
 /* ========================================= */
 /* GRÁFICOS E CAIXAS                         */
@@ -232,8 +191,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     min-height: 0;
 }
 
-.chart-box,
-.gauge-box {
+.chart-box, .gauge-box {
     background: var(--bg-card);
     border-radius: 12px;
     border: 1px solid var(--border);
@@ -244,54 +202,15 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     overflow: hidden;
 }
 
-.chart-label {
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    margin-bottom: 6px;
-    font-weight: 700;
-}
+.chart-label { font-size: 0.7rem; color: var(--text-dim); text-transform: uppercase; margin-bottom: 6px; font-weight: 700; }
+.canvas-wrapper { flex: 1; position: relative; min-height: 0; overflow: hidden; }
+canvas { width: 100% !important; height: 100% !important; display: block; }
 
-.canvas-wrapper {
-    flex: 1;
-    position: relative;
-    min-height: 0;
-    overflow: hidden;
-}
-
-canvas {
-    width: 100% !important;
-    height: 100% !important;
-    display: block;
-}
-
-/* ========================================= */
-/* GAUGE DE ATINGIMENTO                      */
-/* ========================================= */
-.gauge-box {
-    justify-content: center;
-    align-items: center;
-    position: relative;
-}
-
-.gauge-center {
-    position: absolute;
-    text-align: center;
-    display: grid;
-}
-
-.gauge-center .percent {
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--primary);
-}
-
-.gauge-center .label {
-    font-size: 0.65rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    font-weight: 700;
-}
+/* GAUGE DE ATINGIMENTO */
+.gauge-box { justify-content: center; align-items: center; position: relative; }
+.gauge-center { position: absolute; text-align: center; display: grid; }
+.gauge-center .percent { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
+.gauge-center .label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; }
 
 /* ========================================= */
 /* FILTROS GLOBAIS E INPUTS DE DATA          */
@@ -307,20 +226,8 @@ canvas {
     align-items: center;
 }
 
-.filter-group {
-    display: flex;
-    flex-direction: column; 
-    gap: 4px;
-}
-
-.filter-group label {
-    font-size: 10px !important;
-    color: #666 !important;
-    text-transform: uppercase;
-    font-weight: 600;
-    display: block;
-    text-align: left;
-}
+.filter-group { display: flex; flex-direction: column; gap: 4px; }
+.filter-group label { font-size: 10px !important; color: #666 !important; text-transform: uppercase; font-weight: 600; display: block; text-align: left; }
 
 .filter-group select {
     background-color: var(--bg-card);
@@ -334,11 +241,7 @@ canvas {
     font-family: var(--font-body);
 }
 
-.filter-group select option {
-    background-color: var(--bg-card);
-    color: var(--text-main);
-}
-
+.filter-group select option { background-color: var(--bg-card); color: var(--text-main); }
 .filter-group select:focus { outline: 1px solid var(--primary); }
 
 .date-input {
@@ -352,20 +255,85 @@ canvas {
     color-scheme: dark;
     outline: none;
 }
-
 .date-input:focus { border-color: var(--primary); }
 
 /* ========================================= */
-/* MEDIA QUERIES (RESPONSIVIDADE AJUSTADA)   */
+/* TABELA DE UNIDADES (VISÃO TABULAR)        */
 /* ========================================= */
+.table-container {
+    flex: 1;
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    overflow: auto; /* Permite rolar a tabela internamente no desktop */
+    min-height: 0;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+    font-size: 0.85rem;
+}
+
+.data-table th {
+    background: #000;
+    color: var(--text-dim);
+    font-weight: 700;
+    padding: 12px 15px;
+    text-transform: uppercase;
+    font-size: 0.7rem;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-bottom: 1px solid var(--border);
+    cursor: pointer;
+}
+
+.data-table th:hover { color: var(--text-main); }
+
+.data-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-main);
+}
+
+.data-table tbody tr:hover { background-color: rgba(255, 255, 255, 0.02); }
+
+.data-table .farol {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 700;
+}
+.data-table .farol-icon { font-size: 16px; }
+
+/* ========================================= */
+/* MEDIA QUERIES (LIBERANDO O CELULAR)       */
+/* ========================================= */
+
 @media (max-width: 1280px) {
     .main-charts-row { grid-template-columns: 1fr 1fr; }
 }
 
+/* TABLETS E CELULARES: TELA DESBLOQUEADA */
 @media (max-width: 1024px) {
-    body { overflow-y: auto; }
+    body { 
+        overflow-y: auto; /* LIBERA A ROLAGEM GERAL */
+        overflow-x: hidden; 
+    }
     
-    .view-section { height: auto; }
+    .main-content {
+        height: auto;
+        min-height: 100vh;
+        overflow-y: visible; /* DESBLOQUEIA */
+    }
+    
+    .view-section { 
+        height: auto; 
+        min-height: 100vh;
+        overflow-y: visible; /* DESBLOQUEIA */
+    }
 
     .main-charts-row,
     .atingimento-row {
@@ -376,48 +344,28 @@ canvas {
     .kpi-grid { height: auto; }
 }
 
-/* Celulares grandes e tablets pequenos */
 @media (max-width: 768px) {
-    .top-header {
-        flex-direction: column;
-        height: auto;
-        padding: 15px;
-        gap: 15px;
-    }
-
+    .top-header { flex-direction: column; height: auto; padding: 15px; gap: 15px; }
     .header-left { width: 100%; justify-content: center; }
-    
     .header-right { width: 100%; }
-    
-    .global-filters {
-        justify-content: center;
-        width: 100%;
-    }
+    .global-filters { justify-content: center; width: 100%; }
 }
 
-/* Celulares Padrão */
+/* CELULAR ESTREITO (IPHONE - VIEWPORT 390X844) */
 @media (max-width: 600px) {
     .sidebar { display: none; }
-
-    .main-content {
-        margin-left: 0;
-        width: 100vw;
-    }
-
-    .kpi-grid { grid-template-columns: 1fr; }
+    .main-content { margin-left: 0; width: 100vw; }
     
-    .view-local-header {
-        flex-direction: column;
-        align-items: center;
-        width: 100%;
+    /* Força KPIs a caírem em coluna para não espremer no mobile */
+    .kpi-grid,
+    #visao-unidades .kpi-grid { 
+        grid-template-columns: 1fr !important; 
     }
 
-    .date-input {
-        width: 100%; /* Facilita o toque na tela do celular */
-    }
+    /* Gráficos ganham altura mínima para não sumirem da tela */
+    .chart-box { min-height: 320px; }
+    .gauge-box { min-height: 250px; }
     
-    .filter-group > div {
-        flex-direction: column; /* Coloca Data Inicial em cima da Final no mobile */
-        width: 100%;
-    }
+    /* Container da tabela no celular ganha altura extra */
+    .table-container { min-height: 400px; }
 }
