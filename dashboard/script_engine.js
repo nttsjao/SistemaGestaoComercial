@@ -1,6 +1,10 @@
 Chart.register(ChartDataLabels);
 
-const AppState = { filtro: { loja: 'ALL', modelo: 'ALL', gestao: 'ALL' } };
+// [D08] Adicionado o controle de sort (ordenação) no estado da aplicação
+const AppState = { 
+    filtro: { loja: 'ALL', modelo: 'ALL', gestao: 'ALL' },
+    sort: { coluna: 'faturamento', direcao: 'desc' }
+};
 
 const CORES = {
     primary: '#f2c029',
@@ -32,6 +36,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
     }
     configurarEventosFiltro();
+    configurarEventosTabela(); // [D08] Inicia a escuta de cliques na tabela
     atualizarRelogio();
     setInterval(atualizarRelogio, 1000);
     setTimeout(() => processarEDataRender(), 150);
@@ -113,8 +118,8 @@ function processarEDataRender() {
 
     // --- VISÃO UNIDADES ---
     renderCardsUnidades(baseFiltrada, metas, d.tempo);
-    renderGraficosHibridos(baseFiltrada); // [NOVO D07]
-    renderTabelaUnidades(baseFiltrada, d.tempo);
+    renderGraficosHibridos(baseFiltrada); 
+    renderTabelaUnidades(baseFiltrada, d.tempo); // [D08] Passou a incluir ordenação
 
     document.getElementById('last-update').innerText = d.ultima_atualizacao;
 }
@@ -209,10 +214,9 @@ function renderCardsUnidades(baseFiltrada, metas, tempo) {
 }
 
 // ==========================================
-// [D07] GRÁFICOS HÍBRIDOS
+// GRÁFICOS HÍBRIDOS
 // ==========================================
 function renderGraficosHibridos(baseFiltrada) {
-    // --- DADOS PARA GRÁFICO 1 (MODELO: COMBO BARRAS + LINHA) ---
     const dadosModelo = {
         'LOJA': { fat: 0, meta: 0 },
         'QUIOSQUE': { fat: 0, meta: 0 }
@@ -231,7 +235,6 @@ function renderGraficosHibridos(baseFiltrada) {
 
     renderComboModelo('chart-hibrido-modelo', labelsModelo, faturamentoModelo, atingimentoModelo);
 
-    // --- DADOS PARA GRÁFICO 2 (GESTÃO: SÉRIE TEMPORAL / LINHAS) ---
     const timelinePropria = {};
     const timelineFranquia = {};
 
@@ -342,14 +345,82 @@ function renderLinhasGestao(id, labels, dataPropria, dataFranquia) {
     });
 }
 
+// ==========================================
+// [D08] TABELA DINÂMICA: ORDENAÇÃO E FARÓIS
+// ==========================================
+
+// Função para ouvir os cliques no cabeçalho
+function configurarEventosTabela() {
+    const headers = document.querySelectorAll('th[data-sort]');
+    headers.forEach(th => {
+        th.addEventListener('click', () => {
+            const colunaAlvo = th.getAttribute('data-sort');
+            
+            // Inverte a direção se já for a coluna atual
+            if (AppState.sort.coluna === colunaAlvo) {
+                AppState.sort.direcao = AppState.sort.direcao === 'desc' ? 'asc' : 'desc';
+            } else {
+                AppState.sort.coluna = colunaAlvo;
+                AppState.sort.direcao = 'desc'; // Novo clique sempre começa do maior para o menor
+            }
+            
+            // Limpa as setas de todos e coloca no atual
+            document.querySelectorAll('.sort-icon').forEach(icon => icon.innerText = '');
+            const seta = AppState.sort.direcao === 'desc' ? ' ↓' : ' ↑';
+            th.querySelector('.sort-icon').innerText = seta;
+
+            processarEDataRender();
+        });
+    });
+
+    // Define a setinha inicial visual na coluna Faturamento
+    const thFat = document.querySelector('th[data-sort="faturamento"] .sort-icon');
+    if(thFat) thFat.innerText = ' ↓';
+}
+
 function renderTabelaUnidades(baseFiltrada, tempo) {
     const tbody = document.getElementById('tbody-unidades');
     if (!tbody) return;
     
     tbody.innerHTML = ''; 
     const diasRestantes = Math.max((tempo?.total ?? 30) - (tempo?.dia ?? 1), 1);
+    const atingIdeal = tempo?.ideal ?? 0;
 
-    baseFiltrada.forEach(loja => {
+    // 1. Calcula as médias da rede para Benchmark (Ticket e PA)
+    let somaTicket = 0, somaPA = 0, countReal = 0;
+    baseFiltrada.forEach(l => { 
+        somaTicket += (l.TICKET || 0); 
+        somaPA += (l.PA || 0); 
+        countReal++;
+    });
+    const avgTicket = countReal > 0 ? somaTicket / countReal : 0;
+    const avgPA = countReal > 0 ? somaPA / countReal : 0;
+
+    // 2. Clona e Ordena a Base Dinamicamente
+    const baseOrdenada = [...baseFiltrada].sort((a, b) => {
+        let valA, valB;
+        const col = AppState.sort.coluna;
+        const dir = AppState.sort.direcao === 'asc' ? 1 : -1;
+
+        const fatA = a.REALIZADO || 0, metaA = a.META_GERAL || 0;
+        const fatB = b.REALIZADO || 0, metaB = b.META_GERAL || 0;
+
+        if (col === 'loja') {
+            return (a['NOME PDV'] || '').localeCompare(b['NOME PDV'] || '') * dir;
+        } else if (col === 'meta') { valA = metaA; valB = metaB; }
+        else if (col === 'faturamento') { valA = fatA; valB = fatB; }
+        else if (col === 'ating_geral') { valA = metaA > 0 ? fatA/metaA : 0; valB = metaB > 0 ? fatB/metaB : 0; }
+        else if (col === 'projecao_val') { valA = a.PROJECAO_VAL || 0; valB = b.PROJECAO_VAL || 0; }
+        else if (col === 'meta_diaria') { valA = Math.max(0, (metaA-fatA)/diasRestantes); valB = Math.max(0, (metaB-fatB)/diasRestantes); }
+        else if (col === 'ticket') { valA = a.TICKET || 0; valB = b.TICKET || 0; }
+        else if (col === 'pa') { valA = a.PA || 0; valB = b.PA || 0; }
+        else { valA = 0; valB = 0; }
+
+        return (valA > valB ? 1 : valA < valB ? -1 : 0) * dir;
+    });
+
+    // 3. Renderiza a tabela aplicando regras visuais
+    baseOrdenada.forEach(loja => {
         const pdv = loja['NOME PDV'] || 'N/A';
         const meta = loja.META_GERAL || 0;
         const fat = loja.REALIZADO || 0;
@@ -361,25 +432,39 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
 
         const projVal = loja.PROJECAO_VAL || 0;
         const projPerc = loja.PROJECAO_PERC || 0;
-        
+        const ticket = loja.TICKET || 0;
+        const pa = loja.PA || 0;
+
+        // Regra de Cor: Projeção
         let corProj = 'var(--text-main)';
         if (projPerc >= 100) corProj = CORES.ace; 
         else if (projPerc >= 80) corProj = CORES.primary; 
         else corProj = CORES.prt; 
 
-        const ticket = loja.TICKET || 0;
-        const pa = loja.PA || 0;
+        // Regra de Cor: Atingimento Geral baseado no AtingIdeal
+        let corAting = CORES.prt;
+        if (atingGeral >= atingIdeal) corAting = CORES.ace;
+        else if (atingGeral >= atingIdeal * 0.8) corAting = CORES.primary;
+
+        // Ícones de Benchmark vs Rede
+        const iconTicket = ticket >= avgTicket 
+            ? `<span style="color: ${CORES.ace}; font-size: 10px; margin-left: 4px;" title="Acima da média da rede">▲</span>` 
+            : `<span style="color: ${CORES.prt}; font-size: 10px; margin-left: 4px;" title="Abaixo da média da rede">▼</span>`;
+            
+        const iconPA = pa >= avgPA 
+            ? `<span style="color: ${CORES.ace}; font-size: 10px; margin-left: 4px;" title="Acima da média da rede">▲</span>` 
+            : `<span style="color: ${CORES.prt}; font-size: 10px; margin-left: 4px;" title="Abaixo da média da rede">▼</span>`;
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td style="font-weight: 700;">${pdv}</td>
             <td>${fmt(meta)}</td>
             <td>${fmt(fat)}</td>
-            <td>${atingGeral.toFixed(1)}%</td>
+            <td style="color: ${corAting}; font-weight: 700;">${atingGeral.toFixed(1)}%</td>
             <td style="color: ${corProj}; font-weight: 800;">${fmt(projVal)}</td>
             <td style="color: var(--text-dim);">${fmt(metaDiaria)}</td>
-            <td>${fmt(ticket)}</td>
-            <td>${pa.toFixed(2)}</td>
+            <td>${fmt(ticket)} ${iconTicket}</td>
+            <td>${pa.toFixed(2)} ${iconPA}</td>
         `;
         tbody.appendChild(tr);
     });
