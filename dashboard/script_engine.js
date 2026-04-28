@@ -428,7 +428,7 @@ function renderMixDonut(id, dados, paleta) {
         type: 'doughnut',
         data: { labels: Object.keys(dados), datasets: [{ data: Object.values(dados), backgroundColor: Object.keys(dados).map(chave => paleta[chave] || '#444444'), borderColor: '#121212', borderWidth: 2 }] },
         options: { 
-            layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } }, radius: 90, cutout: 50, responsive: true, maintainAspectRatio: false,
+            layout: { padding: { top: 25, bottom: 25, left: 25, right: 25 } }, radius: 70, cutout: 50, responsive: true, maintainAspectRatio: false,
             plugins: { 
                 legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 20, boxWidth: 10 } },
                 datalabels: { anchor: 'end', align: 'end', offset: 8, color: '#fff', font: { size: 10, weight: 'bold' },
