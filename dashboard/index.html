@@ -29,11 +29,13 @@
                 <span class="material-symbols-outlined">store</span>
                 <span class="nav-text">Unidades</span>
             </button>
-            <button class="nav-item" title="Vendedores">
+            <!-- [VEND-01] Adicionado o data-target para o roteamento SPA -->
+            <button class="nav-item" data-target="visao-vendedores" title="Vendedores">
                 <span class="material-symbols-outlined">groups</span>
                 <span class="nav-text">Vendedores</span>
             </button>
-            <button class="nav-item" title="Performance">
+            <!-- Preparação futura para Performance -->
+            <button class="nav-item" data-target="visao-performance" title="Performance">
                 <span class="material-symbols-outlined">query_stats</span>
                 <span class="nav-text">Performance</span>
             </button>
@@ -237,6 +239,58 @@
                         <tbody id="tbody-unidades">
                             </tbody>
                     </table>
+                </div>
+            </section>
+
+            <!-- ========================================== -->
+            <!-- [VEND-01] BLOCO 4: VISÃO VENDEDORES        -->
+            <!-- ========================================== -->
+            <section id="visao-vendedores" class="view-section">
+                
+                <!-- Painel de Controles -->
+                <div class="ranking-panel">
+                    <h3 class="section-title">Painel de Ranking</h3>
+                    
+                    <div class="ranking-controls">
+                        <!-- Linha 1: Referência -->
+                        <div class="control-group-ranking">
+                            <span class="control-label">Analisar:</span>
+                            <div class="button-group">
+                                <button class="btn-ranking-ref active" data-ref="vendedor">Vendedores</button>
+                                <button class="btn-ranking-ref" data-ref="pdv">PDV</button>
+                            </div>
+                        </div>
+
+                        <!-- Linha 2: Métricas -->
+                        <div class="control-group-ranking">
+                            <span class="control-label">Métrica:</span>
+                            <div class="button-group">
+                                <button class="btn-ranking-metric active" data-metric="REALIZADO">Faturamento</button>
+                                <button class="btn-ranking-metric" data-metric="CEL">CEL</button>
+                                <button class="btn-ranking-metric" data-metric="ACE">ACE</button>
+                                <button class="btn-ranking-metric" data-metric="SOM">SOM</button>
+                                <button class="btn-ranking-metric" data-metric="PRT">PRT</button>
+                                <button class="btn-ranking-metric" data-metric="TICKET">Ticket M.</button>
+                                <button class="btn-ranking-metric" data-metric="PA">P.A.</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Palco do Gráfico Top 10 -->
+                <div class="ranking-chart-box">
+                    <h3 id="ranking-title" class="section-title" style="color: #fff; margin-bottom: 20px;">Top 10 - Faturamento (Vendedores)</h3>
+                    <div class="canvas-wrapper-ranking">
+                        <canvas id="chart-ranking"></canvas>
+                    </div>
+                </div>
+
+            </section>
+
+            <!-- Preparação da Aba de Performance -->
+            <section id="visao-performance" class="view-section">
+                <div class="kpi-card" style="justify-content: center;">
+                    <b style="color: var(--text-dim);">Painel de Performance em Construção...</b>
                 </div>
             </section>
 

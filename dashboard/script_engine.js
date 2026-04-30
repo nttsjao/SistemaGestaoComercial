@@ -1,3 +1,4 @@
+// Configuração Global do Chart.js
 Chart.register(ChartDataLabels);
 
 // [D09] Adicionado dataInicio e dataFim no estado global
@@ -16,10 +17,10 @@ const CORES = {
 
 const PALETAS_MIX = {
     categorias:{
-        'CEL': '#FFB347', 'ACE': '#E67E22', 'SOM': '#8B0000', 'PRT': '#A9A9A9'
+        'CEL': '#FFB347', 'ACE': '#E67E22', 'SOM': '#FFF500', 'PRT': '#FF4901'
     },
     planos: {
-        'CREDIÁRIO': '#E67E22', 'DINHEIRO': '#2E8B57', 'CARTÃO': '#0047AB', 'BRASILCARD': '#8B0000', 'ODRES F': '#116466'  
+        'CREDIÁRIO': '#E67E22', 'DINHEIRO': '#FF5B00', 'CARTÃO': '#eb6831', 'BRASIL CARD': '#FFEE00', 'ODRES F': '#FF2121'  
     }
 };
 
@@ -400,21 +401,15 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
                 });
             }
 
-            // Conta dias selecionados matematicamente para recriar a Meta
-            const dtIni = new Date(start + 'T00:00:00');
-            const dtFim = new Date(end + 'T00:00:00');
-            let diasSelecionados = Math.ceil(Math.abs(dtFim - dtIni) / (1000 * 60 * 60 * 24)) + 1;
-            // Fallback se não preencheu as duas pontas
-            if (!dataInicio || !dataFim) diasSelecionados = diasComVendaNoPeriodo || 1;
-
-            const diasTotalMes = tempo?.total ?? 30;
-            const metaDiariaOrig = (l.META_GERAL || 0) / diasTotalMes;
-
+            // Atribui o faturamento apenas do período selecionado
             l.REALIZADO = fatPeriodo;
-            l.META_GERAL = metaDiariaOrig * diasSelecionados;
             
-            // Recalcula a Projeção e a % focado no Run Rate do período
-            l.PROJECAO_VAL = diasComVendaNoPeriodo > 0 ? (fatPeriodo / diasComVendaNoPeriodo) * diasSelecionados : 0;
+            // A META_GERAL (do mês) permanece intocada conforme solicitado.
+            // l.META_GERAL = loja.META_GERAL; (Já está assim pelo clone)
+
+            // Recalcula a Projeção (Run Rate do período projetado para o mês inteiro)
+            const diasTotalMes = tempo?.total ?? 30;
+            l.PROJECAO_VAL = diasComVendaNoPeriodo > 0 ? (fatPeriodo / diasComVendaNoPeriodo) * diasTotalMes : 0;
             l.PROJECAO_PERC = l.META_GERAL > 0 ? (l.PROJECAO_VAL / l.META_GERAL) * 100 : 0;
         }
         return l;
@@ -463,10 +458,7 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         
         const atingGeral = meta > 0 ? (fat / meta) * 100 : 0;
         
-        // Se estiver com filtro de data, a meta diária restante não faz muito sentido logico, 
-        // mas vamos mostrar o quanto faltaria por dia para bater a meta do período.
-        let divisorMetaD = usaFiltroData ? 1 : diasRestantesMes; 
-        let metaDiaria = (meta - fat) / divisorMetaD;
+        let metaDiaria = (meta - fat) / diasRestantesMes;
         if (metaDiaria < 0) metaDiaria = 0; 
 
         const projVal = loja.PROJECAO_VAL || 0;

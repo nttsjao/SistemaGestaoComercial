@@ -297,6 +297,98 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
 .data-table tbody tr:hover { background-color: rgba(255, 255, 255, 0.05); }
 
 /* ========================================= */
+/* [VEND-01] VISÃO VENDEDORES (RANKING)      */
+/* ========================================= */
+.ranking-panel {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.section-title {
+    font-size: 1rem;
+    color: var(--primary);
+    font-family: var(--font-heading);
+    margin-bottom: 5px;
+}
+
+.ranking-controls {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.control-group-ranking {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap; /* Garante layout fluido no mobile */
+}
+
+.control-label {
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    width: 70px; /* Largura fixa alinha os controles */
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap; /* Botões não quebram em telas pequenas */
+}
+
+/* Estilo Base dos Botões (Pílulas) */
+.btn-ranking-ref, .btn-ranking-metric {
+    background: #1a1a1a;
+    color: var(--text-dim);
+    border: 1px solid #333;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-family: var(--font-body);
+}
+
+/* Efeito Hover */
+.btn-ranking-ref:hover, .btn-ranking-metric:hover {
+    border-color: var(--primary);
+    color: var(--text-main);
+}
+
+/* Estado Ativo (Botão Selecionado) */
+.btn-ranking-ref.active, .btn-ranking-metric.active {
+    background: var(--primary);
+    color: #000;
+    border-color: var(--primary);
+    font-weight: 800;
+}
+
+.ranking-chart-box {
+    background: var(--bg-card);
+    border-radius: 12px;
+    border: 1px solid var(--border);
+    padding: 20px;
+    flex: 1; /* Faz a caixa crescer preenchendo a tela */
+    display: flex;
+    flex-direction: column;
+    min-height: 400px;
+}
+
+.canvas-wrapper-ranking {
+    flex: 1;
+    position: relative;
+    width: 100%;
+}
+
+/* ========================================= */
 /* MEDIA QUERIES (RESPONSIVIDADE MASTER)     */
 /* ========================================= */
 
