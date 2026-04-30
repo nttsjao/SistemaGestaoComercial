@@ -12,15 +12,16 @@ const CORES = {
     ace: '#24ff00',     // Verde (Sucesso)
     prt: '#ff0900',     // Vermelho (Alerta)
     trilha: '#121212',
-    texto: '#888888'
+    texto: '#888888',
+    rastro: '#878787'
 };
 
 const PALETAS_MIX = {
     categorias:{
-        'CEL': '#FFB347', 'ACE': '#E67E22', 'SOM': '#FFF500', 'PRT': '#FF4901'
+        'CEL': '#efe800', 'ACE': '#ffc72c', 'SOM': '#fff55e', 'PRT': '#f0d900'
     },
     planos: {
-        'CREDIÁRIO': '#E67E22', 'DINHEIRO': '#FF5B00', 'CARTÃO': '#eb6831', 'BRASIL CARD': '#FFEE00', 'ODRES F': '#FF2121'  
+        'CREDIÁRIO': '#ffd700', 'DINHEIRO': '#FF5B00', 'CARTÃO': '#eb6831', 'BRASIL CARD': '#FFEE00', 'ODRES F': '#FF2121'  
     }
 };
 
@@ -541,7 +542,7 @@ function renderMixDonut(id, dados, paleta) {
         type: 'doughnut',
         data: { labels: Object.keys(dados), datasets: [{ data: Object.values(dados), backgroundColor: Object.keys(dados).map(chave => paleta[chave] || '#444444'), borderColor: '#121212', borderWidth: 2 }] },
         options: { 
-            layout: { padding: { top: 10, bottom: 10, left: 25, right: 25 } }, radius: 90, cutout: 60, responsive: true, maintainAspectRatio: false,
+            layout: { padding: { top: 10, bottom: 10, left: 25, right: 25 } }, radius: 85, cutout: 55, responsive: true, maintainAspectRatio: false,
             plugins: { 
                 legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 20, boxWidth: 10 } },
                 datalabels: { anchor: 'end', align: 'end', offset: 8, color: '#fff', font: { size: 10, weight: 'bold' },
@@ -571,7 +572,7 @@ function renderGauge(id, valor, labelId, atingIdeal) {
     const v = Math.min(100, Math.max(0, valor));
     const cor = obterCorGauge(valor, atingIdeal);
     document.getElementById(labelId).innerText = `${v.toFixed(1)}%`;
-    new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [v, 100 - v], backgroundColor: [cor, CORES.trilha], borderWidth: 0 }] },
+    new Chart(ctx, { type: 'doughnut', data: { datasets: [{ data: [v, 100 - v], backgroundColor: [cor, CORES.rastro], borderWidth: 0 }] },
         options: { cutout: '88%', responsive: true, maintainAspectRatio: false, plugins: { datalabels: { display: false }, tooltip: { enabled: false } } }
     });
 }
