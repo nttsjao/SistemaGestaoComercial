@@ -21,7 +21,7 @@ const PALETAS_MIX = {
         'CEL': '#efe800', 'ACE': '#ffc72c', 'SOM': '#fff55e', 'PRT': '#f0d900'
     },
     planos: {
-        'CREDIÁRIO': '#ffd700', 'DINHEIRO': '#FF5B00', 'CARTÃO': '#eb6831', 'BRASIL CARD': '#FFEE00', 'ODRES F': '#FF2121'  
+        'CREDIÁRIO': '#ffd700', 'DINHEIRO': '#efcc25', 'CARTÃO': '#ebe000', 'BRASIL CARD': '#FFEE00', 'ODRES F': '#ebc400'  
     }
 };
 
