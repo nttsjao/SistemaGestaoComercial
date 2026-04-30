@@ -8,9 +8,9 @@ const AppState = {
 };
 
 const CORES = {
-    primary: '#f2c029',
-    ace: '#2ecc71',     // Verde (Sucesso)
-    prt: '#ff4d4d',     // Vermelho (Alerta)
+    primary: '#ffff00',
+    ace: '#24ff00',     // Verde (Sucesso)
+    prt: '#ff0900',     // Vermelho (Alerta)
     trilha: '#121212',
     texto: '#888888'
 };
