@@ -1,8 +1,8 @@
 Chart.register(ChartDataLabels);
 
-// [D08] Adicionado o controle de sort (ordenação) no estado da aplicação
+// [D09] Adicionado dataInicio e dataFim no estado global
 const AppState = { 
-    filtro: { loja: 'ALL', modelo: 'ALL', gestao: 'ALL' },
+    filtro: { loja: 'ALL', modelo: 'ALL', gestao: 'ALL', dataInicio: '', dataFim: '' },
     sort: { coluna: 'faturamento', direcao: 'desc' }
 };
 
@@ -11,32 +11,28 @@ const CORES = {
     ace: '#2ecc71',     // Verde (Sucesso)
     prt: '#ff4d4d',     // Vermelho (Alerta)
     trilha: '#121212',
-    sunset: ['#FFD700', '#F2C029', '#FFA500', '#FF8C00', '#FF7F50']
+    texto: '#888888'
 };
 
 const PALETAS_MIX = {
     categorias:{
-        'CEL': '#FFB347',
-        'ACE': '#E67E22',
-        'SOM': '#8B0000',
-        'PRT': '#A9A9A9'
+        'CEL': '#FFB347', 'ACE': '#E67E22', 'SOM': '#8B0000', 'PRT': '#A9A9A9'
     },
     planos: {
-        'CREDIÁRIO': '#E67E22',
-        'DINHEIRO': '#2E8B57',
-        'CARTÃO': '#0047AB',
-        'BRASILCARD': '#8B0000',
-        'ODRES F': '#116466'  
+        'CREDIÁRIO': '#E67E22', 'DINHEIRO': '#2E8B57', 'CARTÃO': '#0047AB', 'BRASILCARD': '#8B0000', 'ODRES F': '#116466'  
     }
 };
 
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
 document.addEventListener('DOMContentLoaded', () => {
     if (typeof dadosDashboard === 'undefined') {
         console.error("❌ Erro: dados.js não encontrado.");
         return;
     }
     configurarEventosFiltro();
-    configurarEventosTabela(); // [D08] Inicia a escuta de cliques na tabela
+    configurarEventosTabela();
     atualizarRelogio();
     setInterval(atualizarRelogio, 1000);
     setTimeout(() => processarEDataRender(), 150);
@@ -47,7 +43,7 @@ document.addEventListener('DOMContentLoaded', () => {
 window.addEventListener('resize', () => processarEDataRender());
 
 // ==========================================
-// MOTOR DE FILTRAGEM GLOBAL
+// MOTOR DE FILTRAGEM GLOBAL (MACRO)
 // ==========================================
 function filtrarBase(base) {
     if (!base) return [];
@@ -65,7 +61,7 @@ function filtrarBase(base) {
 }
 
 // ==========================================
-// PROCESSAMENTO PRINCIPAL
+// ORQUESTRADOR DE RENDERIZAÇÃO
 // ==========================================
 function processarEDataRender() {
     const d = dadosDashboard;
@@ -119,7 +115,9 @@ function processarEDataRender() {
     // --- VISÃO UNIDADES ---
     renderCardsUnidades(baseFiltrada, metas, d.tempo);
     renderGraficosHibridos(baseFiltrada); 
-    renderTabelaUnidades(baseFiltrada, d.tempo); // [D08] Passou a incluir ordenação
+    
+    // [D09] Tabela recalcula com base na Data
+    renderTabelaUnidades(baseFiltrada, d.tempo);
 
     document.getElementById('last-update').innerText = d.ultima_atualizacao;
 }
@@ -346,25 +344,21 @@ function renderLinhasGestao(id, labels, dataPropria, dataFranquia) {
 }
 
 // ==========================================
-// [D08] TABELA DINÂMICA: ORDENAÇÃO E FARÓIS
+// [D08/D09] TABELA DINÂMICA (ORDENAÇÃO + DATA)
 // ==========================================
-
-// Função para ouvir os cliques no cabeçalho
 function configurarEventosTabela() {
     const headers = document.querySelectorAll('th[data-sort]');
     headers.forEach(th => {
         th.addEventListener('click', () => {
             const colunaAlvo = th.getAttribute('data-sort');
             
-            // Inverte a direção se já for a coluna atual
             if (AppState.sort.coluna === colunaAlvo) {
                 AppState.sort.direcao = AppState.sort.direcao === 'desc' ? 'asc' : 'desc';
             } else {
                 AppState.sort.coluna = colunaAlvo;
-                AppState.sort.direcao = 'desc'; // Novo clique sempre começa do maior para o menor
+                AppState.sort.direcao = 'desc';
             }
             
-            // Limpa as setas de todos e coloca no atual
             document.querySelectorAll('.sort-icon').forEach(icon => icon.innerText = '');
             const seta = AppState.sort.direcao === 'desc' ? ' ↓' : ' ↑';
             th.querySelector('.sort-icon').innerText = seta;
@@ -373,7 +367,6 @@ function configurarEventosTabela() {
         });
     });
 
-    // Define a setinha inicial visual na coluna Faturamento
     const thFat = document.querySelector('th[data-sort="faturamento"] .sort-icon');
     if(thFat) thFat.innerText = ' ↓';
 }
@@ -381,14 +374,55 @@ function configurarEventosTabela() {
 function renderTabelaUnidades(baseFiltrada, tempo) {
     const tbody = document.getElementById('tbody-unidades');
     if (!tbody) return;
-    
     tbody.innerHTML = ''; 
-    const diasRestantes = Math.max((tempo?.total ?? 30) - (tempo?.dia ?? 1), 1);
+    
     const atingIdeal = tempo?.ideal ?? 0;
+    const { dataInicio, dataFim } = AppState.filtro;
+    const usaFiltroData = dataInicio !== '' || dataFim !== '';
 
-    // 1. Calcula as médias da rede para Benchmark (Ticket e PA)
+    // 1. D09 - MAPEAR A BASE SOBRESCREVENDO VALORES COM O FILTRO DE DATA
+    const baseTabela = baseFiltrada.map(loja => {
+        const l = { ...loja }; // Clona para não quebrar os gráficos globais
+        
+        if (usaFiltroData) {
+            const start = dataInicio || '2000-01-01';
+            const end = dataFim || '2100-12-31';
+            
+            let fatPeriodo = 0;
+            let diasComVendaNoPeriodo = 0;
+            
+            if (l.historico_diario) {
+                l.historico_diario.forEach(dia => {
+                    if (dia.Date >= start && dia.Date <= end) {
+                        fatPeriodo += (dia.REALIZADO || 0);
+                        diasComVendaNoPeriodo++;
+                    }
+                });
+            }
+
+            // Conta dias selecionados matematicamente para recriar a Meta
+            const dtIni = new Date(start + 'T00:00:00');
+            const dtFim = new Date(end + 'T00:00:00');
+            let diasSelecionados = Math.ceil(Math.abs(dtFim - dtIni) / (1000 * 60 * 60 * 24)) + 1;
+            // Fallback se não preencheu as duas pontas
+            if (!dataInicio || !dataFim) diasSelecionados = diasComVendaNoPeriodo || 1;
+
+            const diasTotalMes = tempo?.total ?? 30;
+            const metaDiariaOrig = (l.META_GERAL || 0) / diasTotalMes;
+
+            l.REALIZADO = fatPeriodo;
+            l.META_GERAL = metaDiariaOrig * diasSelecionados;
+            
+            // Recalcula a Projeção e a % focado no Run Rate do período
+            l.PROJECAO_VAL = diasComVendaNoPeriodo > 0 ? (fatPeriodo / diasComVendaNoPeriodo) * diasSelecionados : 0;
+            l.PROJECAO_PERC = l.META_GERAL > 0 ? (l.PROJECAO_VAL / l.META_GERAL) * 100 : 0;
+        }
+        return l;
+    });
+
+    // 2. Calcula as médias da rede para Benchmark (Ticket e PA) usando a base recalculada
     let somaTicket = 0, somaPA = 0, countReal = 0;
-    baseFiltrada.forEach(l => { 
+    baseTabela.forEach(l => { 
         somaTicket += (l.TICKET || 0); 
         somaPA += (l.PA || 0); 
         countReal++;
@@ -396,8 +430,8 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
     const avgTicket = countReal > 0 ? somaTicket / countReal : 0;
     const avgPA = countReal > 0 ? somaPA / countReal : 0;
 
-    // 2. Clona e Ordena a Base Dinamicamente
-    const baseOrdenada = [...baseFiltrada].sort((a, b) => {
+    // 3. Clona e Ordena a Base Dinamicamente
+    const baseOrdenada = [...baseTabela].sort((a, b) => {
         let valA, valB;
         const col = AppState.sort.coluna;
         const dir = AppState.sort.direcao === 'asc' ? 1 : -1;
@@ -411,7 +445,7 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         else if (col === 'faturamento') { valA = fatA; valB = fatB; }
         else if (col === 'ating_geral') { valA = metaA > 0 ? fatA/metaA : 0; valB = metaB > 0 ? fatB/metaB : 0; }
         else if (col === 'projecao_val') { valA = a.PROJECAO_VAL || 0; valB = b.PROJECAO_VAL || 0; }
-        else if (col === 'meta_diaria') { valA = Math.max(0, (metaA-fatA)/diasRestantes); valB = Math.max(0, (metaB-fatB)/diasRestantes); }
+        else if (col === 'meta_diaria') { valA = Math.max(0, metaA-fatA); valB = Math.max(0, metaB-fatB); } // Simplificado para ordenação
         else if (col === 'ticket') { valA = a.TICKET || 0; valB = b.TICKET || 0; }
         else if (col === 'pa') { valA = a.PA || 0; valB = b.PA || 0; }
         else { valA = 0; valB = 0; }
@@ -419,7 +453,9 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         return (valA > valB ? 1 : valA < valB ? -1 : 0) * dir;
     });
 
-    // 3. Renderiza a tabela aplicando regras visuais
+    // 4. Renderiza a tabela aplicando regras visuais
+    const diasRestantesMes = Math.max((tempo?.total ?? 30) - (tempo?.dia ?? 1), 1);
+
     baseOrdenada.forEach(loja => {
         const pdv = loja['NOME PDV'] || 'N/A';
         const meta = loja.META_GERAL || 0;
@@ -427,7 +463,10 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         
         const atingGeral = meta > 0 ? (fat / meta) * 100 : 0;
         
-        let metaDiaria = (meta - fat) / diasRestantes;
+        // Se estiver com filtro de data, a meta diária restante não faz muito sentido logico, 
+        // mas vamos mostrar o quanto faltaria por dia para bater a meta do período.
+        let divisorMetaD = usaFiltroData ? 1 : diasRestantesMes; 
+        let metaDiaria = (meta - fat) / divisorMetaD;
         if (metaDiaria < 0) metaDiaria = 0; 
 
         const projVal = loja.PROJECAO_VAL || 0;
@@ -435,18 +474,15 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         const ticket = loja.TICKET || 0;
         const pa = loja.PA || 0;
 
-        // Regra de Cor: Projeção
         let corProj = 'var(--text-main)';
         if (projPerc >= 100) corProj = CORES.ace; 
         else if (projPerc >= 80) corProj = CORES.primary; 
         else corProj = CORES.prt; 
 
-        // Regra de Cor: Atingimento Geral baseado no AtingIdeal
         let corAting = CORES.prt;
         if (atingGeral >= atingIdeal) corAting = CORES.ace;
         else if (atingGeral >= atingIdeal * 0.8) corAting = CORES.primary;
 
-        // Ícones de Benchmark vs Rede
         const iconTicket = ticket >= avgTicket 
             ? `<span style="color: ${CORES.ace}; font-size: 10px; margin-left: 4px;" title="Acima da média da rede">▲</span>` 
             : `<span style="color: ${CORES.prt}; font-size: 10px; margin-left: 4px;" title="Abaixo da média da rede">▼</span>`;
@@ -513,7 +549,7 @@ function renderMixDonut(id, dados, paleta) {
         type: 'doughnut',
         data: { labels: Object.keys(dados), datasets: [{ data: Object.values(dados), backgroundColor: Object.keys(dados).map(chave => paleta[chave] || '#444444'), borderColor: '#121212', borderWidth: 2 }] },
         options: { 
-            layout: { padding: { top: 10, bottom: 10, left: 25, right: 25 } }, radius: 80, cutout: 55, responsive: true, maintainAspectRatio: false,
+            layout: { padding: { top: 10, bottom: 10, left: 25, right: 25 } }, radius: 90, cutout: 60, responsive: true, maintainAspectRatio: false,
             plugins: { 
                 legend: { position: 'bottom', labels: { color: '#888', font: { size: 10 }, padding: 20, boxWidth: 10 } },
                 datalabels: { anchor: 'end', align: 'end', offset: 8, color: '#fff', font: { size: 10, weight: 'bold' },
@@ -548,6 +584,7 @@ function renderGauge(id, valor, labelId, atingIdeal) {
     });
 }
 
+// [D09] Listener para capturar os dados do calendário no topo
 function configurarEventosFiltro() {
     const selLoja = document.getElementById('filter-loja');
     if (selLoja && dadosDashboard.unidades) {
@@ -557,10 +594,15 @@ function configurarEventosFiltro() {
             selLoja.appendChild(opt);
         });
     }
-    ['filter-loja', 'filter-modelo', 'filter-gestao'].forEach(id => {
+
+    const ids = ['filter-loja', 'filter-modelo', 'filter-gestao', 'filter-date-start', 'filter-date-end'];
+    ids.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.addEventListener('change', e => {
-            AppState.filtro[id.replace('filter-', '')] = e.target.value;
+            if (id === 'filter-date-start') AppState.filtro.dataInicio = e.target.value;
+            else if (id === 'filter-date-end') AppState.filtro.dataFim = e.target.value;
+            else AppState.filtro[id.replace('filter-', '')] = e.target.value;
+            
             processarEDataRender();
         });
     });
