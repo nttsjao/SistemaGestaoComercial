@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
     
+    <!-- Bibliotecas Base do Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
 </head>
@@ -29,12 +30,10 @@
                 <span class="material-symbols-outlined">store</span>
                 <span class="nav-text">Unidades</span>
             </button>
-            <!-- [VEND-01] Adicionado o data-target para o roteamento SPA -->
             <button class="nav-item" data-target="visao-vendedores" title="Vendedores">
                 <span class="material-symbols-outlined">groups</span>
                 <span class="nav-text">Vendedores</span>
             </button>
-            <!-- Preparação futura para Performance -->
             <button class="nav-item" data-target="visao-performance" title="Performance">
                 <span class="material-symbols-outlined">query_stats</span>
                 <span class="nav-text">Performance</span>
@@ -179,28 +178,22 @@
             <section id="visao-unidades" class="view-section">
                 
                 <div class="kpi-grid" style="grid-template-columns: repeat(4, 1fr);">
-                    
                     <div class="kpi-card" id="kpi-uni-fat-d1">
                         <span class="material-symbols-outlined">history_toggle_off</span>
                         <div class="kpi-data">
                             <span>Fat. Ontem</span>
                             <b>R$ 0</b>
-                            <span id="val-crescimento-d1" style="font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; gap: 2px;">
-                                --
-                            </span>
+                            <span id="val-crescimento-d1" style="font-size: 0.65rem; font-weight: 700; display: flex; align-items: center; gap: 2px;">--</span>
                         </div>
                     </div>
-
                     <div class="kpi-card" id="kpi-uni-esperado">
                         <span class="material-symbols-outlined">event_available</span>
                         <div class="kpi-data"><span>Esperado Hoje</span><b>R$ 0</b></div>
                     </div>
-                    
                     <div class="kpi-card" id="kpi-uni-gap">
                         <span class="material-symbols-outlined">warning</span>
                         <div class="kpi-data"><span>Gap de Ritmo</span><b>R$ 0</b></div>
                     </div>
-                    
                     <div class="kpi-card" id="kpi-uni-constancia">
                         <span class="material-symbols-outlined">vital_signs</span>
                         <div class="kpi-data"><span>Constância</span><b>0%</b></div>
@@ -236,58 +229,118 @@
                                 <th data-sort="pa">P.A. <span class="sort-icon"></span></th>
                             </tr>
                         </thead>
-                        <tbody id="tbody-unidades">
-                            </tbody>
+                        <tbody id="tbody-unidades"></tbody>
                     </table>
                 </div>
             </section>
 
             <!-- ========================================== -->
-            <!-- [VEND-01] BLOCO 4: VISÃO VENDEDORES        -->
+            <!-- BLOCO 4: VISÃO VENDEDORES (GRID 2x2)       -->
             <!-- ========================================== -->
             <section id="visao-vendedores" class="view-section">
                 
-                <!-- Painel de Controles -->
-                <div class="ranking-panel">
-                    <h3 class="section-title">Painel de Ranking</h3>
+                <div class="vendedores-grid-2x2">
                     
-                    <div class="ranking-controls">
-                        <!-- Linha 1: Referência -->
-                        <div class="control-group-ranking">
-                            <span class="control-label">Analisar:</span>
-                            <div class="button-group">
-                                <button class="btn-ranking-ref active" data-ref="vendedor">Vendedores</button>
-                                <button class="btn-ranking-ref" data-ref="pdv">PDV</button>
+                    <!-- 1º QUADRANTE: Ranking Dinâmico -->
+                    <div class="ranking-chart-box">
+                        <div class="ranking-header">
+                            <h3 id="ranking-title" class="section-title" style="color: #fff;">Ranking Dinâmico</h3>
+                            <div class="ranking-controls-inline">
+                                <div class="button-group">
+                                    <button class="btn-ranking-ref active" data-ref="vendedor">Consultores</button>
+                                    <button class="btn-ranking-ref" data-ref="pdv">PDVs</button>
+                                </div>
+                                <span class="divider-vertical"></span>
+                                <div class="button-group">
+                                    <!-- A métrica base continua sendo o Realizado, mas a exibição (label) é Geral -->
+                                    <button class="btn-ranking-metric active" data-metric="REALIZADO">Geral</button>
+                                    <button class="btn-ranking-metric" data-metric="CEL">CEL</button>
+                                    <button class="btn-ranking-metric" data-metric="ACE">ACE</button>
+                                    <button class="btn-ranking-metric" data-metric="SOM">SOM</button>
+                                    <button class="btn-ranking-metric" data-metric="PRT">PRT</button>
+                                    <button class="btn-ranking-metric" data-metric="TICKET">Ticket</button>
+                                    <button class="btn-ranking-metric" data-metric="PA">P.A.</button>
+                                </div>
                             </div>
                         </div>
-
-                        <!-- Linha 2: Métricas -->
-                        <div class="control-group-ranking">
-                            <span class="control-label">Métrica:</span>
-                            <div class="button-group">
-                                <button class="btn-ranking-metric active" data-metric="REALIZADO">Faturamento</button>
-                                <button class="btn-ranking-metric" data-metric="CEL">CEL</button>
-                                <button class="btn-ranking-metric" data-metric="ACE">ACE</button>
-                                <button class="btn-ranking-metric" data-metric="SOM">SOM</button>
-                                <button class="btn-ranking-metric" data-metric="PRT">PRT</button>
-                                <button class="btn-ranking-metric" data-metric="TICKET">Ticket M.</button>
-                                <button class="btn-ranking-metric" data-metric="PA">P.A.</button>
-                            </div>
+                        <div class="canvas-wrapper-ranking">
+                            <canvas id="chart-ranking"></canvas>
                         </div>
                     </div>
-                </div>
 
-                <!-- Palco do Gráfico Top 10 -->
-                <div class="ranking-chart-box">
-                    <h3 id="ranking-title" class="section-title" style="color: #fff; margin-bottom: 20px;">Top 10 - Faturamento (Vendedores)</h3>
-                    <div class="canvas-wrapper-ranking">
-                        <canvas id="chart-ranking"></canvas>
+                    <!-- 2º QUADRANTE: Pódio de Metas (Top 3) -->
+                    <div class="ranking-chart-box" id="quad-metas">
+                        <div class="ranking-header" style="flex-direction: row; justify-content: space-between; align-items: flex-start;">
+                            <div>
+                                <h3 class="section-title" style="color: #fff;">Pódio de Atingimento (Top 3)</h3>
+                                <span style="font-size: 0.75rem; color: var(--text-dim);">Média das metas obrigatórias (Geral, Acessórios e Protect)</span>
+                            </div>
+                            
+                            <!-- Filtro Múltiplo (Nativo). Segure CTRL para selecionar vários -->
+                            <div style="display: flex; flex-direction: column; gap: 4px;">
+                                <label style="font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700;">Filtro de Lojas</label>
+                                <select id="filtro-metas-interno" class="select-dark" multiple size="3" style="background: #1a1a1a; padding: 4px 8px; border-radius: 6px; min-width: 140px; height: 50px;">
+                                    <option value="ALL" selected>Todas as Lojas</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <!-- O Esqueleto do Pódio -->
+                        <div class="podio-container" id="container-podio">
+                            
+                            <!-- 2º LUGAR -->
+                            <div class="podio-item pos-2">
+                                <div class="podio-avatar">🥈</div>
+                                <div class="podio-nome" id="podio-nome-2">--</div>
+                                <div class="podio-nota" id="podio-nota-2">0%</div>
+                                <div class="podio-barra"></div>
+                            </div>
+
+                            <!-- 1º LUGAR -->
+                            <div class="podio-item pos-1">
+                                <div class="podio-avatar">🥇</div>
+                                <div class="podio-nome" id="podio-nome-1">--</div>
+                                <div class="podio-nota" id="podio-nota-1">0%</div>
+                                <div class="podio-barra"></div>
+                            </div>
+
+                            <!-- 3º LUGAR -->
+                            <div class="podio-item pos-3">
+                                <div class="podio-avatar">🥉</div>
+                                <div class="podio-nome" id="podio-nome-3">--</div>
+                                <div class="podio-nota" id="podio-nota-3">0%</div>
+                                <div class="podio-barra"></div>
+                            </div>
+
+                        </div>
                     </div>
-                </div>
+                    
+                    <!-- 3º QUADRANTE: Score de Performance -->
+                    <div class="ranking-chart-box" id="quad-score">
+                        <div class="ranking-header">
+                            <h3 class="section-title" style="color: var(--primary);">Score de Performance (Top 5)</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-dim);">Matriz avaliando Geral, Acessórios, Protect, Ticket e P.A.</span>
+                        </div>
+                        <!-- Removido o estilo de rolagem (overflow-y) -->
+                        <div class="canvas-wrapper-ranking" id="container-heatmap">
+                            <!-- O JS injetará a tabela de calor aqui -->
+                        </div>
+                    </div>
 
+                    <!-- 4º QUADRANTE: Mapa de Regiões -->
+                    <div class="ranking-chart-box" id="quad-regioes">
+                        <div class="ranking-header">
+                            <h3 class="section-title" style="color: var(--success);">Top Melhores Regiões</h3>
+                            <span style="font-size: 0.75rem; color: var(--text-dim);">Mapa de densidade baseado no Score Global</span>
+                        </div>
+                        <div class="canvas-wrapper-ranking">
+                            <canvas id="chart-melhores-regioes"></canvas>
+                        </div>
+                    </div>
+
+                </div>
             </section>
 
-            <!-- Preparação da Aba de Performance -->
             <section id="visao-performance" class="view-section">
                 <div class="kpi-card" style="justify-content: center;">
                     <b style="color: var(--text-dim);">Painel de Performance em Construção...</b>

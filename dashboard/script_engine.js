@@ -1,28 +1,25 @@
 // Configuração Global do Chart.js
 Chart.register(ChartDataLabels);
 
-// [D09] Adicionado dataInicio e dataFim no estado global
+// Estado Global da Aplicação
 const AppState = { 
     filtro: { loja: 'ALL', modelo: 'ALL', gestao: 'ALL', dataInicio: '', dataFim: '' },
-    sort: { coluna: 'faturamento', direcao: 'desc' }
+    sort: { coluna: 'faturamento', direcao: 'desc' },
+    ranking: { ref: 'vendedor', metrica: 'REALIZADO', nomeMetrica: 'Geral' }
 };
 
 const CORES = {
-    primary: '#ffff00',
-    ace: '#24ff00',     // Verde (Sucesso)
-    prt: '#ff0900',     // Vermelho (Alerta)
+    primary: '#f8b518',
+    ace: '#2d5128',     // Verde (Sucesso)
+    prt: '#bd0000',     // Vermelho (Alerta)
     trilha: '#121212',
     texto: '#888888',
     rastro: '#878787'
 };
 
 const PALETAS_MIX = {
-    categorias:{
-        'CEL': '#efe800', 'ACE': '#ffc72c', 'SOM': '#fff55e', 'PRT': '#f0d900'
-    },
-    planos: {
-        'CREDIÁRIO': '#ffd700', 'DINHEIRO': '#efcc25', 'CARTÃO': '#ebe000', 'BRASIL CARD': '#FFEE00', 'ODRES F': '#ebc400'  
-    }
+    categorias:{ 'CEL': '#efe800', 'ACE': '#ffc72c', 'SOM': '#fff55e', 'PRT': '#f0d900' },
+    planos: { 'CREDIÁRIO': '#ffd700', 'DINHEIRO': '#efcc25', 'CARTÃO': '#ebe000', 'BRASIL CARD': '#FFEE00', 'ODRES F': '#ebc400' }
 };
 
 // ==========================================
@@ -33,8 +30,11 @@ document.addEventListener('DOMContentLoaded', () => {
         console.error("❌ Erro: dados.js não encontrado.");
         return;
     }
+    
     configurarEventosFiltro();
     configurarEventosTabela();
+    configurarEventosRanking(); 
+    
     atualizarRelogio();
     setInterval(atualizarRelogio, 1000);
     setTimeout(() => processarEDataRender(), 150);
@@ -117,17 +117,430 @@ function processarEDataRender() {
     // --- VISÃO UNIDADES ---
     renderCardsUnidades(baseFiltrada, metas, d.tempo);
     renderGraficosHibridos(baseFiltrada); 
-    
-    // [D09] Tabela recalcula com base na Data
     renderTabelaUnidades(baseFiltrada, d.tempo);
+
+    // --- [VEND] VISÃO VENDEDORES ---
+    renderVisaoVendedores(baseFiltrada);
 
     document.getElementById('last-update').innerText = d.ultima_atualizacao;
 }
 
 // ==========================================
-// MÓDULOS DA VISÃO UNIDADES
+// [VEND] MÓDULOS DA VISÃO VENDEDORES (COCKPIT)
 // ==========================================
 
+function configurarEventosRanking() {
+    document.querySelectorAll('.btn-ranking-ref').forEach(btn => btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.btn-ranking-ref').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        AppState.ranking.ref = e.currentTarget.getAttribute('data-ref'); 
+        processarEDataRender();
+    }));
+
+    document.querySelectorAll('.btn-ranking-metric').forEach(btn => btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.btn-ranking-metric').forEach(b => b.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        AppState.ranking.metrica = e.currentTarget.getAttribute('data-metric');
+        AppState.ranking.nomeMetrica = e.currentTarget.innerText; 
+        processarEDataRender();
+    }));
+}
+
+function inicializarFiltroLojas(lojasUnicas, d) {
+    const containerMetas = document.getElementById('quad-metas');
+    if (!containerMetas) return;
+    
+    const filtroNativo = document.getElementById('filtro-metas-interno');
+    if (filtroNativo) filtroNativo.style.display = 'none';
+
+    if (document.getElementById('custom-dropdown-lojas')) return;
+
+    const header = containerMetas.querySelector('.ranking-header');
+    
+    const ui = document.createElement('div');
+    ui.id = 'custom-dropdown-lojas';
+    ui.style.cssText = 'position: relative; min-width: 160px; font-family: var(--font-body); z-index: 100;';
+    
+    let optionsHtml = `<label style="display: flex; gap: 8px; padding: 6px; cursor: pointer; color: #fff; font-size: 0.75rem;"><input type="checkbox" value="ALL" checked class="cb-filtro-loja"> Selecionar Todas</label>`;
+    
+    lojasUnicas.forEach(idLoja => {
+        let lojaNome = `Loja ${idLoja}`;
+        if (d.unidades) {
+            const lojaData = d.unidades.find(u => String(u['ID_LOJA']) === String(idLoja));
+            if (lojaData) lojaNome = lojaData['NOME PDV'];
+        }
+        optionsHtml += `<label style="display: flex; gap: 8px; padding: 6px; cursor: pointer; color: #fff; font-size: 0.75rem;"><input type="checkbox" value="${idLoja}" class="cb-filtro-loja"> ${lojaNome}</label>`;
+    });
+
+    ui.innerHTML = `
+        <div id="btn-drop-lojas" style="background: #1a1a1a; border: 1px solid var(--border); padding: 8px 12px; border-radius: 6px; cursor: pointer; color: var(--text-main); font-size: 0.75rem; display: flex; justify-content: space-between; align-items: center; font-weight: 600;">
+            <span id="lbl-drop-lojas">Todas as Lojas</span>
+            <span class="material-symbols-outlined" style="font-size: 16px;">expand_more</span>
+        </div>
+        <div id="list-drop-lojas" style="display: none; position: absolute; top: 100%; right: 0; width: 220px; background: #121212; border: 1px solid var(--border); border-radius: 6px; margin-top: 5px; max-height: 200px; overflow-y: auto; padding: 5px; box-shadow: 0 5px 15px rgba(0,0,0,0.8);">
+            ${optionsHtml}
+        </div>
+    `;
+    
+    header.appendChild(ui);
+
+    const btn = document.getElementById('btn-drop-lojas');
+    const lista = document.getElementById('list-drop-lojas');
+    const cbs = document.querySelectorAll('.cb-filtro-loja');
+
+    btn.addEventListener('click', () => {
+        lista.style.display = lista.style.display === 'none' ? 'block' : 'none';
+    });
+
+    cbs.forEach(cb => cb.addEventListener('change', (e) => {
+        if(e.target.value === 'ALL' && e.target.checked) {
+            cbs.forEach(c => { if(c.value !== 'ALL') c.checked = false; });
+        } else if (e.target.checked) {
+            document.querySelector('.cb-filtro-loja[value="ALL"]').checked = false;
+        }
+        processarEDataRender();
+    }));
+
+    document.addEventListener('click', (e) => {
+        if(!ui.contains(e.target)) lista.style.display = 'none';
+    });
+}
+
+// ==========================================
+// MOTOR DE DEDUPLICAÇÃO E LIMPEZA
+// ==========================================
+function unificarBase(base, ref) {
+    const mapaMesmaLoja = {};
+    base.forEach(v => {
+        let nomeCru = (ref === 'pdv' ? (v['NOME PDV'] || 'N/A') : (v['NOME VENDEDOR'] || 'N/A')).trim();
+        let nomeLimpo = nomeCru.replace(/\s*\(\s*\d+\s*\)\s*$/, '').replace(/\s+/g, ' ').toUpperCase();
+        let chaveIdentidade = nomeLimpo + "_" + v['ID_LOJA'];
+
+        if (!mapaMesmaLoja[chaveIdentidade]) {
+            mapaMesmaLoja[chaveIdentidade] = { ...v, NOME_LIMPO: nomeLimpo, NOME_CRU: nomeCru };
+        }
+    });
+
+    const agrupadoFinal = {};
+    Object.values(mapaMesmaLoja).forEach(v => {
+        let nome = v.NOME_LIMPO;
+        if (!agrupadoFinal[nome]) {
+            agrupadoFinal[nome] = { 
+                ...v, 
+                [ref === 'pdv' ? 'NOME PDV' : 'NOME VENDEDOR']: v.NOME_CRU,
+                REALIZADO: 0, CEL: 0, ACE: 0, SOM: 0, PRT: 0, 
+                QTD_PEÇAS: 0, N_VENDAS: 0, 
+                META_GERAL: 0, META_ACE: 0, META_PRT: 0 
+            };
+        }
+        
+        let agg = agrupadoFinal[nome];
+        agg.REALIZADO += (v.REALIZADO || 0);
+        agg.CEL += (v.CEL || 0);
+        agg.ACE += (v.ACE || 0);
+        agg.SOM += (v.SOM || 0);
+        agg.PRT += (v.PRT || 0);
+        agg.QTD_PEÇAS += (v.QTD_PEÇAS || 0);
+        agg.N_VENDAS += (v.N_VENDAS || 0);
+
+        agg.META_GERAL = Math.max(agg.META_GERAL, (v.META_GERAL || 0));
+        agg.META_ACE = Math.max(agg.META_ACE, (v.META_ACE || 0));
+        agg.META_PRT = Math.max(agg.META_PRT, (v.META_PRT || 0));
+    });
+
+    Object.values(agrupadoFinal).forEach(obj => {
+        obj.TICKET = obj.N_VENDAS > 0 ? (obj.REALIZADO / obj.N_VENDAS) : 0;
+        obj.PA = obj.N_VENDAS > 0 ? (obj.QTD_PEÇAS / obj.N_VENDAS) : 0;
+    });
+
+    return Object.values(agrupadoFinal);
+}
+
+function calcularScoreVendedores(vendedoresBase) {
+    const validos = vendedoresBase.filter(v => (v.REALIZADO || 0) > 0);
+    if (validos.length === 0) return;
+
+    const calcStats = (arr) => {
+        const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+        const std = Math.sqrt(arr.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / arr.length) || 1; 
+        return { mean, std };
+    };
+
+    const statsFat = calcStats(validos.map(v => v.REALIZADO || 0));
+    const statsTicket = calcStats(validos.map(v => v.TICKET || 0));
+    const statsPA = calcStats(validos.map(v => v.PA || 0));
+    const statsAtg = calcStats(validos.map(v => (v.META_GERAL > 0 ? (v.REALIZADO / v.META_GERAL) * 100 : 0)));
+
+    vendedoresBase.forEach(v => {
+        if (!v.REALIZADO) { v.SCORE_FINAL = 0; return; }
+        
+        const atg = v.META_GERAL > 0 ? (v.REALIZADO / v.META_GERAL) * 100 : 0;
+        
+        const zFat = ((v.REALIZADO || 0) - statsFat.mean) / statsFat.std;
+        const zTicket = ((v.TICKET || 0) - statsTicket.mean) / statsTicket.std;
+        const zPA = ((v.PA || 0) - statsPA.mean) / statsPA.std;
+        const zAtg = (atg - statsAtg.mean) / statsAtg.std;
+
+        const darNota = (z) => Math.min(10, Math.max(0, 5 + (z * 1.66)));
+        
+        v.NOTA_FAT = darNota(zFat);
+        v.NOTA_TICKET = darNota(zTicket);
+        v.NOTA_PA = darNota(zPA);
+        v.NOTA_ATG = darNota(zAtg);
+
+        v.SCORE_FINAL = (v.NOTA_FAT * 0.3) + (v.NOTA_ATG * 0.3) + (v.NOTA_TICKET * 0.2) + (v.NOTA_PA * 0.2);
+    });
+}
+
+function renderVisaoVendedores(baseUnidades) {
+    const d = dadosDashboard;
+    const { ref, metrica, nomeMetrica } = AppState.ranking;
+
+    const aplicarFiltroTopo = (base) => base.filter(item => {
+        const idTipo = Number(item['ID TIPO'] || 0);
+        const matchModelo = AppState.filtro.modelo === 'ALL' || ((idTipo === 1 || idTipo === 2) ? 'LOJA' : 'QUIOSQUE') === AppState.filtro.modelo;
+        const matchGestao = AppState.filtro.gestao === 'ALL' || ((idTipo === 1 || idTipo === 3) ? 'PRÓPRIA' : 'FRANQUIA') === AppState.filtro.gestao;
+        return matchModelo && matchGestao;
+    });
+
+    let baseRawRanking = ref === 'pdv' ? [...baseUnidades] : (d.vendedores ? [...d.vendedores] : []);
+    let baseRawConsultores = d.vendedores ? [...d.vendedores] : [];
+
+    baseRawRanking = aplicarFiltroTopo(baseRawRanking);
+    baseRawConsultores = aplicarFiltroTopo(baseRawConsultores);
+
+    const baseRanking = unificarBase(baseRawRanking, ref);
+    const baseConsultores = unificarBase(baseRawConsultores, 'vendedor');
+
+    // ===================================
+    // QUADRANTE 1: Ranking Dinâmico
+    // ===================================
+    const tituloEl = document.getElementById('ranking-title');
+    if (tituloEl) tituloEl.innerText = `Ranking - Visão ${nomeMetrica}`;
+    
+    if (baseRanking.length > 0) {
+        const baseRank = [...baseRanking].sort((a, b) => (b[metrica] || 0) - (a[metrica] || 0)).slice(0, 10);
+        const labels = baseRank.map(i => ref === 'pdv' ? (i['NOME PDV'] || 'N/A') : (i['NOME VENDEDOR'] || 'N/A'));
+        const valores = baseRank.map(i => i[metrica] || 0);
+        desenharGraficoRanking('chart-ranking', labels, valores, metrica);
+    }
+
+    // ===================================
+    // QUADRANTES 2, 3 e 4
+    // ===================================
+    if (baseConsultores.length > 0) {
+        calcularScoreVendedores(baseConsultores);
+
+        const lojasUnicas = [...new Set(baseRawConsultores.map(v => v['ID_LOJA']))];
+        inicializarFiltroLojas(lojasUnicas, d);
+
+        const checkboxes = document.querySelectorAll('.cb-filtro-loja:checked');
+        let lojasSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+        if (lojasSelecionadas.length === 0) lojasSelecionadas = ['ALL'];
+
+        let baseMetas;
+        if (lojasSelecionadas.includes('ALL')) {
+            baseMetas = baseConsultores;
+        } else {
+            const rawFiltrada = baseRawConsultores.filter(v => lojasSelecionadas.includes(String(v['ID_LOJA'])));
+            baseMetas = unificarBase(rawFiltrada, 'vendedor');
+        }
+            
+        renderPodioMetas(baseMetas);
+        renderHeatmapScore(baseConsultores);
+        
+        // Passamos 'd' inteiro para o cruzamento inteligente de dados (Gap do Gráfico Resolvido)
+        desenharMelhoresRegioes('chart-melhores-regioes', baseConsultores, d);
+    }
+}
+
+// Instâncias para os Gráficos Principais
+let chartRankingInstancia = null;
+let chartRegioesInstancia = null; // Instância recuperada da rosca
+
+function desenharGraficoRanking(id, labels, valores, metrica) {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    if (chartRankingInstancia) chartRankingInstancia.destroy();
+    
+    const corBarra = PALETAS_MIX.categorias[metrica] || CORES.primary;
+    
+    chartRankingInstancia = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: labels, datasets: [{ data: valores, backgroundColor: corBarra, borderRadius: 4, barThickness: 16 }] },
+        options: {
+            indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+            layout: { padding: { right: 60, left: 2 } },
+            plugins: { 
+                legend: { display: false }, 
+                datalabels: { 
+                    anchor: 'end', align: 'right', color: '#c6c6c6', font: { size: 10, weight: 'bold' }, clip: false,
+                    formatter: (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(v)
+                } 
+            },
+            scales: { 
+                x: { display: false, grace: '30%' }, 
+                y: { 
+                    grid: { display: false }, 
+                    ticks: { 
+                        color: '#fff', font: { size: 10, weight: 'bold', family: 'Inter, sans-serif' },
+                        crossAlign: 'near', align: 'start', padding: 5 
+                    } 
+                } 
+            }
+        }
+    });
+}
+
+function renderPodioMetas(base) {
+    document.querySelectorAll('.podio-avatar').forEach(el => {
+        el.innerHTML = `<span class="material-symbols-outlined" style="font-size: 36px; text-shadow: 0 4px 10px rgba(0,0,0,0.5);">military_tech</span>`;
+    });
+    document.querySelector('.pos-1 .podio-avatar span').style.color = '#f8b518'; 
+    document.querySelector('.pos-2 .podio-avatar span').style.color = '#e0e0e0'; 
+    document.querySelector('.pos-3 .podio-avatar span').style.color = '#cd7f32'; 
+
+    base.forEach(v => {
+        const atgGeral = v.META_GERAL > 0 ? (v.REALIZADO / v.META_GERAL) * 100 : 0;
+        const atgAce = v.META_ACE > 0 ? (v.ACE / v.META_ACE) * 100 : 0;
+        const atgPrt = v.META_PRT > 0 ? (v.PRT / v.META_PRT) * 100 : 0;
+        v.MEDIA_METAS = (atgGeral + atgAce + atgPrt) / 3;
+    });
+
+    const top3 = [...base].sort((a, b) => (b.MEDIA_METAS || 0) - (a.MEDIA_METAS || 0)).slice(0, 3);
+
+    const atualizarPosicao = (posId, index) => {
+        const cons = top3[index];
+        const elNome = document.getElementById(`podio-nome-${posId}`);
+        const elNota = document.getElementById(`podio-nota-${posId}`);
+        
+        if (elNome && elNota) {
+            if (cons && cons.MEDIA_METAS > 0 && cons['NOME VENDEDOR']) {
+                const nomeQuebrado = cons['NOME VENDEDOR'].replace(/\s+/g, ' ').split(" ");
+                const nomeFormatado = nomeQuebrado[0] + (nomeQuebrado.length > 1 ? " " + nomeQuebrado[1] : "");
+                elNome.innerText = nomeFormatado;
+                elNota.innerText = `${cons.MEDIA_METAS.toFixed(1)}%`;
+            } else {
+                elNome.innerText = '--';
+                elNota.innerText = '0%';
+            }
+        }
+    };
+
+    atualizarPosicao(1, 0); 
+    atualizarPosicao(2, 1); 
+    atualizarPosicao(3, 2); 
+}
+
+function renderHeatmapScore(base) {
+    const container = document.getElementById('container-heatmap');
+    if (!container) return;
+
+    const top5 = [...base].sort((a, b) => (b.SCORE_FINAL || 0) - (a.SCORE_FINAL || 0)).slice(0, 5);
+
+    const getCorCalor = (nota) => {
+        if (nota >= 8) return 'rgba(45, 81, 40, 0.8)';
+        if (nota >= 5) return 'rgba(248, 181, 24, 0.6)';
+        return 'rgba(189, 0, 0, 0.6)';
+    };
+
+    let html = `<table class="heatmap-table">
+        <thead>
+            <tr>
+                <th>Consultor</th>
+                <th>Score</th>
+                <th>Geral</th>
+                <th>Faturamento</th>
+                <th>Ticket</th>
+                <th>P.A.</th>
+            </tr>
+        </thead>
+        <tbody>`;
+
+    top5.forEach(v => {
+        const atg = v.META_GERAL > 0 ? (v.REALIZADO / v.META_GERAL) * 100 : 0;
+        html += `<tr>
+            <td class="nome-vend">${v['NOME VENDEDOR'] || 'N/A'}</td>
+            <td style="font-weight: 800; color: #e0e0e0;">${(v.SCORE_FINAL || 0).toFixed(1)}</td>
+            <td style="background-color: ${getCorCalor(v.NOTA_ATG)}">${atg.toFixed(1)}%</td>
+            <td style="background-color: ${getCorCalor(v.NOTA_FAT)}">${fmt(v.REALIZADO)}</td>
+            <td style="background-color: ${getCorCalor(v.NOTA_TICKET)}">${fmt(v.TICKET)}</td>
+            <td style="background-color: ${getCorCalor(v.NOTA_PA)}">${(v.PA || 0).toFixed(2)}</td>
+        </tr>`;
+    });
+    html += `</tbody></table>`;
+    container.innerHTML = html;
+}
+
+// ==========================================
+// GRÁFICO DE ROSCA BLINDADO (TOP 5 REGIÕES)
+// ==========================================
+function desenharMelhoresRegioes(id, baseConsultores, d) {
+    const ctx = document.getElementById(id);
+    if (!ctx) return;
+    if (chartRegioesInstancia) chartRegioesInstancia.destroy();
+
+    const scoreRegiao = {};
+    const countRegiao = {};
+
+    baseConsultores.forEach(v => {
+        if (v.SCORE_FINAL > 0) {
+            let regiaoStr = 'Sem Região';
+            const idLojaStr = String(v['ID_LOJA']);
+
+            // Tentativa 1: Busca pela tabela de Regiões (O Padrão)
+            if (d.regioes) {
+                const r = d.regioes.find(loc => String(loc['ID_LOJA']) === idLojaStr);
+                if (r && (r.LOCALIZACAO || r['cidade - estado'] || r.REGIAO)) {
+                    regiaoStr = r.LOCALIZACAO || r['cidade - estado'] || r.REGIAO;
+                }
+            }
+            
+            // Tentativa 2 (Fallback Inteligente): Se a tabela de Regiões não existir, pega o Nome da Loja na tabela de Unidades
+            if (regiaoStr === 'Sem Região' && d.unidades) {
+                const u = d.unidades.find(loc => String(loc['ID_LOJA']) === idLojaStr);
+                if (u) {
+                    regiaoStr = u.REGIAO || u.LOCALIZACAO || u['cidade - estado'] || u['NOME PDV'] || 'Sem Região';
+                }
+            }
+
+            regiaoStr = regiaoStr.toUpperCase();
+
+            scoreRegiao[regiaoStr] = (scoreRegiao[regiaoStr] || 0) + v.SCORE_FINAL;
+            countRegiao[regiaoStr] = (countRegiao[regiaoStr] || 0) + 1;
+        }
+    });
+
+    const mediaRegiao = Object.keys(scoreRegiao).map(r => ({
+        regiao: r, media: scoreRegiao[r] / countRegiao[r]
+    })).sort((a, b) => b.media - a.media).slice(0, 5);
+
+    const labels = mediaRegiao.map(r => r.regiao);
+    const dados = mediaRegiao.map(r => r.media);
+
+    chartRegioesInstancia = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: dados,
+                backgroundColor: [CORES.ace, CORES.primary, '#895129', '#555', CORES.prt],
+                borderWidth: 1, borderColor: '#121212'
+            }]
+        },
+        options: {
+            cutout: '60%', responsive: true, maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'right', labels: { color: '#888', font: { size: 10 }, boxWidth: 12 } },
+                datalabels: { color: '#fff', font: { weight: 'bold', size: 10 }, formatter: (v) => v.toFixed(1) }
+            }
+        }
+    });
+}
+
+// ==========================================
+// MÓDULOS DA VISÃO UNIDADES
+// ==========================================
 function renderCardsUnidades(baseFiltrada, metas, tempo) {
     const diasTotalMes = tempo?.total ?? 30;
     const diaAtual = tempo?.dia ?? 1;
@@ -213,9 +626,6 @@ function renderCardsUnidades(baseFiltrada, metas, tempo) {
     }
 }
 
-// ==========================================
-// GRÁFICOS HÍBRIDOS
-// ==========================================
 function renderGraficosHibridos(baseFiltrada) {
     const dadosModelo = {
         'LOJA': { fat: 0, meta: 0 },
@@ -273,31 +683,18 @@ function renderComboModelo(id, labels, dataFat, dataAting) {
             labels: labels,
             datasets: [
                 {
-                    type: 'bar',
-                    label: 'Faturamento',
-                    data: dataFat,
-                    backgroundColor: '#895129',
-                    borderRadius: 4,
-                    yAxisID: 'y',
-                    order: 2
+                    type: 'bar', label: 'Faturamento', data: dataFat, backgroundColor: '#895129',
+                    borderRadius: 4, yAxisID: 'y', order: 2
                 },
                 {
-                    type: 'line',
-                    label: 'Atingimento %',
-                    data: dataAting,
-                    borderColor: '#fff',
-                    borderWidth: 2,
-                    pointBackgroundColor: CORES.ace,
-                    tension: 0.4,
-                    yAxisID: 'y1',
-                    order: 1,
+                    type: 'line', label: 'Atingimento %', data: dataAting, borderColor: '#fff',
+                    borderWidth: 2, pointBackgroundColor: CORES.ace, tension: 0.4, yAxisID: 'y1', order: 1,
                     datalabels: { align: 'top', formatter: (v) => v.toFixed(1) + '%' }
                 }
             ]
         },
         options: {
-            responsive: true,
-            maintainAspectRatio: false,
+            responsive: true, maintainAspectRatio: false,
             plugins: {
                 legend: { display: false },
                 datalabels: {
@@ -346,7 +743,7 @@ function renderLinhasGestao(id, labels, dataPropria, dataFranquia) {
 }
 
 // ==========================================
-// [D08/D09] TABELA DINÂMICA (ORDENAÇÃO + DATA)
+// TABELA DINÂMICA
 // ==========================================
 function configurarEventosTabela() {
     const headers = document.querySelectorAll('th[data-sort]');
@@ -382,9 +779,8 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
     const { dataInicio, dataFim } = AppState.filtro;
     const usaFiltroData = dataInicio !== '' || dataFim !== '';
 
-    // 1. D09 - MAPEAR A BASE SOBRESCREVENDO VALORES COM O FILTRO DE DATA
     const baseTabela = baseFiltrada.map(loja => {
-        const l = { ...loja }; // Clona para não quebrar os gráficos globais
+        const l = { ...loja }; 
         
         if (usaFiltroData) {
             const start = dataInicio || '2000-01-01';
@@ -402,13 +798,8 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
                 });
             }
 
-            // Atribui o faturamento apenas do período selecionado
             l.REALIZADO = fatPeriodo;
             
-            // A META_GERAL (do mês) permanece intocada conforme solicitado.
-            // l.META_GERAL = loja.META_GERAL; (Já está assim pelo clone)
-
-            // Recalcula a Projeção (Run Rate do período projetado para o mês inteiro)
             const diasTotalMes = tempo?.total ?? 30;
             l.PROJECAO_VAL = diasComVendaNoPeriodo > 0 ? (fatPeriodo / diasComVendaNoPeriodo) * diasTotalMes : 0;
             l.PROJECAO_PERC = l.META_GERAL > 0 ? (l.PROJECAO_VAL / l.META_GERAL) * 100 : 0;
@@ -416,7 +807,6 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         return l;
     });
 
-    // 2. Calcula as médias da rede para Benchmark (Ticket e PA) usando a base recalculada
     let somaTicket = 0, somaPA = 0, countReal = 0;
     baseTabela.forEach(l => { 
         somaTicket += (l.TICKET || 0); 
@@ -426,7 +816,6 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
     const avgTicket = countReal > 0 ? somaTicket / countReal : 0;
     const avgPA = countReal > 0 ? somaPA / countReal : 0;
 
-    // 3. Clona e Ordena a Base Dinamicamente
     const baseOrdenada = [...baseTabela].sort((a, b) => {
         let valA, valB;
         const col = AppState.sort.coluna;
@@ -441,7 +830,7 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         else if (col === 'faturamento') { valA = fatA; valB = fatB; }
         else if (col === 'ating_geral') { valA = metaA > 0 ? fatA/metaA : 0; valB = metaB > 0 ? fatB/metaB : 0; }
         else if (col === 'projecao_val') { valA = a.PROJECAO_VAL || 0; valB = b.PROJECAO_VAL || 0; }
-        else if (col === 'meta_diaria') { valA = Math.max(0, metaA-fatA); valB = Math.max(0, metaB-fatB); } // Simplificado para ordenação
+        else if (col === 'meta_diaria') { valA = Math.max(0, metaA-fatA); valB = Math.max(0, metaB-fatB); }
         else if (col === 'ticket') { valA = a.TICKET || 0; valB = b.TICKET || 0; }
         else if (col === 'pa') { valA = a.PA || 0; valB = b.PA || 0; }
         else { valA = 0; valB = 0; }
@@ -449,7 +838,6 @@ function renderTabelaUnidades(baseFiltrada, tempo) {
         return (valA > valB ? 1 : valA < valB ? -1 : 0) * dir;
     });
 
-    // 4. Renderiza a tabela aplicando regras visuais
     const diasRestantesMes = Math.max((tempo?.total ?? 30) - (tempo?.dia ?? 1), 1);
 
     baseOrdenada.forEach(loja => {
@@ -577,7 +965,6 @@ function renderGauge(id, valor, labelId, atingIdeal) {
     });
 }
 
-// [D09] Listener para capturar os dados do calendário no topo
 function configurarEventosFiltro() {
     const selLoja = document.getElementById('filter-loja');
     if (selLoja && dadosDashboard.unidades) {
@@ -605,7 +992,7 @@ function fmt(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', cur
 function atualizarRelogio() { const el = document.getElementById('relogio'); if (el) el.innerText = new Date().toLocaleTimeString(); }
 
 // ==========================================
-// ROTEAMENTO SPA
+// ROTEAMENTO SPA (MODIFICADO PARA A ABA VENDEDORES)
 // ==========================================
 function iniciarRoteamento() {
     const botoesMenu = document.querySelectorAll('.nav-item[data-target]');
@@ -622,6 +1009,9 @@ function iniciarRoteamento() {
         } else if (targetId === 'visao-unidades') {
             if (filtroLoja) filtroLoja.style.display = 'none';
             if (filtroData) filtroData.style.display = 'flex';
+        } else if (targetId === 'visao-vendedores') {
+            if (filtroLoja) filtroLoja.style.display = 'none';
+            if (filtroData) filtroData.style.display = 'none';
         } else {
             if (filtroLoja) filtroLoja.style.display = 'none';
             if (filtroData) filtroData.style.display = 'none';

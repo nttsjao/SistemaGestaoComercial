@@ -2,10 +2,12 @@ import pandas as pd
 from datetime import datetime
 import os
 
-# CONFIGURAÇÃO DE CAMINHOS
+#* CONFIGURAÇÃO DE CAMINHOS
 CAMINHO_DIM = 'dimensoes.xlsx'
 CAMINHO_DB = r"C:\Users\PHONE STORE\Documents\Análise de Dados PHONE STORE\Dados Phone Store Base.xlsx"
 
+#TODO ==> 1. TRATAMENTO DE DADOS BÁSICOS
+#? Função auxiliar para limpeza de dados monetários (R$ -> Float)
 def limpar_moedas(valor):
     if isinstance(valor, str):
         valor = valor.replace('R$', '').replace('.', '').replace(',', '.').strip()
@@ -15,6 +17,8 @@ def limpar_moedas(valor):
             return 0.0
     return float(valor) if pd.notnull(valor) else 0.0
 
+#TODO ==> 2. CARGA PRINCIPAL DO BANCO DE DADOS
+#? Lê os arquivos Excel, padroniza as colunas de ID, limpa os valores e retorna os DataFrames
 def carregar_banco_dados(mes_referencia=None, ano_referencia=None):
     try:
         print(f"🔍 Conectando aos bancos de dados...")
@@ -22,22 +26,23 @@ def carregar_banco_dados(mes_referencia=None, ano_referencia=None):
         if not os.path.exists(CAMINHO_DIM) or not os.path.exists(CAMINHO_DB):
             raise FileNotFoundError("Arquivos de base (.xlsx) não encontrados.")
 
-        # 1. CARGA DAS DIMENSÕES
+        #* 1. Carga das Dimensões
         df_lojas = pd.read_excel(CAMINHO_DIM, sheet_name='Lojas')
         df_vendedores = pd.read_excel(CAMINHO_DIM, sheet_name='Vendedores')
         df_planos = pd.read_excel(CAMINHO_DIM, sheet_name='Planos')
+        df_regioes = pd.read_excel(CAMINHO_DIM, sheet_name='Regiões')
         
-        # 2. CARGA DAS VENDAS (Removido 'dayfirst' daqui pois não existe em excel)
+        #* 2. Carga das Vendas Fato
         df_cat = pd.read_excel(CAMINHO_DB, sheet_name='F_Vendas_cat')
         df_plano = pd.read_excel(CAMINHO_DB, sheet_name='F_Vendas_Plano')
         df_prod = pd.read_excel(CAMINHO_DB, sheet_name='F_Vendas_Prod')
 
-        # 3. PADRONIZAÇÃO DE IDS
+        #* 3. Padronização Rigorosa de IDs para cruzamento (Merge)
         for df in [df_lojas, df_cat]: df['ID LOJA'] = df['ID LOJA'].astype(str)
         for df in [df_vendedores, df_cat, df_plano]: df['ID VENDEDOR'] = df['ID VENDEDOR'].astype(str)
         for df in [df_planos, df_plano]: df['ID PLANO'] = df['ID PLANO'].astype(str)
 
-        # 4. TRATAMENTO DE DATAS (Onde o 'dayfirst' realmente funciona)
+        #* 4. Tratamento e Padronização de Datas
         df_cat['Date'] = pd.to_datetime(df_cat['Date'], dayfirst=True, errors='coerce')
         df_plano['Date'] = pd.to_datetime(df_plano['Date'], dayfirst=True, errors='coerce')
         
@@ -45,24 +50,27 @@ def carregar_banco_dados(mes_referencia=None, ano_referencia=None):
         mes = mes_referencia or hoje.month
         ano = ano_referencia or hoje.year
 
-        # 5. LIMPEZA MONETÁRIA
+        #* 5. Limpeza de formatação monetária nas colunas de valor
         df_cat['REALIZADO'] = df_cat['REALIZADO'].apply(limpar_moedas)
         df_plano['FATURADO'] = df_plano['FATURADO'].apply(limpar_moedas)
         df_prod['REALIZADO'] = df_prod['REALIZADO'].apply(limpar_moedas)
 
-        # 6. FILTRO DE MÊS VIGENTE
+        #* 6. Filtro de Mês Vigente (Recorte do Snapshot)
         df_snapshot = df_cat[(df_cat['Date'].dt.month == mes) & (df_cat['Date'].dt.year == ano)].copy()
         
+        #* 7. Carga das Metas do mês correspondente
         metas_pdv = carregar_metas_pdv(mes, ano)
         metas_vend = carregar_metas_vendedor(mes, ano)
 
+        #* 8. Empacotamento de todas as bases para o motor de cálculos
         db = {
             'vendas_snapshot': df_snapshot,
             'vendas_plano': df_plano,
             'vendas_prod': df_prod,
             'dim_lojas': df_lojas,
             'dim_vendedores': df_vendedores,
-            'dim_planos': df_planos
+            'dim_planos': df_planos,
+            'dim_regioes': df_regioes  #* Adicionado para suprir o Quadrante 4 (Ofensores por Região)
         }
 
         print(f"✅ Sucesso: {len(df_snapshot)} linhas processadas.")
@@ -72,23 +80,32 @@ def carregar_banco_dados(mes_referencia=None, ano_referencia=None):
         print(f"❌ Erro no Database Engine: {e}")
         return None, None, None
 
+#TODO ==> 3. PROCESSAMENTO DE METAS
+#? Lê a aba de metas do PDV e filtra pelo mês/ano dinamicamente
 def carregar_metas_pdv(mes, ano):
     df = pd.read_excel(CAMINHO_DB, sheet_name='F_MetasPDV')
     df.columns = ['Date', 'ID_LOJA', 'META_GERAL', 'META_CEL', 'META_ACE', 'META_SOM', 'META_PRT']
     df['ID_LOJA'] = df['ID_LOJA'].astype(str)
+    
+    #* Aplica limpeza de moeda apenas nas colunas financeiras (da 3ª em diante)
     for col in df.columns[2:]: df[col] = df[col].apply(limpar_moedas)
     
+    #* Cria string de referência (ex: '04/26') para filtro exato
     ref = f"{str(mes).zfill(2)}/{str(ano)[2:]}"
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
     df['Date_Str'] = df['Date'].dt.strftime('%m/%y')
     return df[df['Date_Str'] == ref].copy()
 
+#? Lê a aba de metas individuais de vendedores e filtra pelo mês/ano
 def carregar_metas_vendedor(mes, ano):
     df = pd.read_excel(CAMINHO_DB, sheet_name='F_MetasVendedor')
     df.columns = ['Date', 'ID_LOJA2', 'ID_VENDEDOR', 'CARGO', 'VENDEDOR', 'PESO_REL', 'META_GERAL', 'META_ACE', 'META_PRT']
     df['ID_VENDEDOR'] = df['ID_VENDEDOR'].astype(str)
+    
+    #* Aplica limpeza de moeda nas colunas de meta
     for col in ['META_GERAL', 'META_ACE', 'META_PRT']: df[col] = df[col].apply(limpar_moedas)
     
+    #* Cria string de referência (ex: '04/26') para filtro exato
     ref = f"{str(mes).zfill(2)}/{str(ano)[2:]}"
     df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
     df['Date_Str'] = df['Date'].dt.strftime('%m/%y')

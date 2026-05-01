@@ -5,15 +5,15 @@
     --sidebar-width: 65px;
     --sidebar-expanded: 240px;
     
-    /* Cores */
+    /* Cores Globais da Phone Store */
     --bg-dark: #050505;
     --bg-card: #0e0e0e;
-    --primary: #f2c029;
+    --primary: #f8b518; /* Dourado/Amarelo */
     --border: #1a1a1a;
     --text-main: #ffffff;
     --text-dim: #888888;
-    --success: #2ecc71;
-    --danger: #ff4d4d;
+    --success: #2d5128; /* Verde */
+    --danger: #bd0000;  /* Vermelho */
     
     /* Tipografia */
     --font-heading: 'Outfit', sans-serif;
@@ -35,7 +35,7 @@ body {
     display: flex;
     height: 100vh;
     width: 100vw;
-    overflow: hidden; /* Mantém a tela fixa no notebook */
+    overflow: hidden; /* Trava a rolagem principal no notebook */
 }
 
 h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
@@ -81,7 +81,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 
 .nav-item.active, .nav-item:hover { 
     color: var(--primary); 
-    background: rgba(242, 192, 41, 0.05); 
+    background: rgba(248, 181, 24, 0.05); 
 }
 
 .nav-text {
@@ -114,7 +114,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     height: 100vh;
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Fixa no Desktop */
+    overflow: hidden; 
 }
 
 .top-header {
@@ -135,7 +135,7 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 .divider { color: var(--primary); }
 
 /* ========================================= */
-/* SISTEMA SPA: CONTROLE DE SEÇÕES [D02]     */
+/* SISTEMA SPA: CONTROLE DE SEÇÕES           */
 /* ========================================= */
 .view-section {
     height: calc(100vh - 60px);
@@ -143,18 +143,19 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
     display: none; 
     flex-direction: column;
     gap: 10px;
-    overflow: hidden; 
+    overflow: auto; /* Permite rolagem apenas se a tela for menor que os dados */
 }
 .view-section.active { display: flex; }
 
 /* ========================================= */
-/* KPIS BÁSICOS                              */
+/* KPIS BÁSICOS E VISÃO GERAL                */
 /* ========================================= */
 .kpi-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
     gap: 10px;
     height: 12%;
+    min-height: 80px;
 }
 
 .kpi-card {
@@ -172,23 +173,20 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 .kpi-data span { font-size: 10px; color: var(--text-dim); text-transform: uppercase; font-weight: 600; }
 .kpi-data b { font-size: 12px; color: var(--text-main); font-weight: 800; }
 
-/* ========================================= */
-/* GRÁFICOS E CAIXAS                         */
-/* ========================================= */
 .main-charts-row {
     display: grid;
     grid-template-columns: 1.6fr 1fr 1fr;
     gap: 10px;
-    height: 55%;
-    min-height: 0;
+    height: 50%;
+    min-height: 250px;
 }
 
 .atingimento-row {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 10px;
-    height: 33%;
-    min-height: 0;
+    height: 35%;
+    min-height: 200px;
 }
 
 .chart-box, .gauge-box {
@@ -206,14 +204,13 @@ h1, h2, h3, .logo, .gauge-center .percent, .kpi-data b {
 .canvas-wrapper { flex: 1; position: relative; min-height: 0; overflow: hidden; }
 canvas { width: 100% !important; height: 100% !important; display: block; }
 
-/* GAUGE DE ATINGIMENTO */
 .gauge-box { justify-content: center; align-items: center; position: relative; }
 .gauge-center { position: absolute; text-align: center; display: grid; }
 .gauge-center .percent { font-size: 1.6rem; font-weight: 800; color: var(--primary); }
 .gauge-center .label { font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; font-weight: 700; }
 
 /* ========================================= */
-/* FILTROS GLOBAIS E INPUTS DE DATA          */
+/* FILTROS GLOBAIS                           */
 /* ========================================= */
 .global-filters {
     display: flex;
@@ -228,7 +225,7 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
 .filter-group { display: flex; flex-direction: column; gap: 4px; }
 .filter-group label { font-size: 10px !important; color: #666 !important; text-transform: uppercase; font-weight: 600; display: block; text-align: left; }
 
-.filter-group select {
+.filter-group select, .date-input {
     background-color: var(--bg-card);
     color: var(--text-main);
     border: 1px solid var(--border);
@@ -236,28 +233,15 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     border-radius: 6px;
     cursor: pointer;
     font-size: 0.85rem;
-    appearance: none;
     font-family: var(--font-body);
 }
 
 .filter-group select option { background-color: var(--bg-card); color: var(--text-main); }
-.filter-group select:focus { outline: 1px solid var(--primary); }
-
-.date-input {
-    background-color: var(--bg-card);
-    color: var(--text-main);
-    border: 1px solid var(--border);
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-family: var(--font-body);
-    font-size: 0.85rem;
-    color-scheme: dark;
-    outline: none;
-}
-.date-input:focus { border-color: var(--primary); }
+.filter-group select:focus, .date-input:focus { outline: 1px solid var(--primary); }
+.date-input { color-scheme: dark; }
 
 /* ========================================= */
-/* TABELA DE UNIDADES (VISÃO TABULAR) [D05]  */
+/* TABELA DE UNIDADES (VISÃO TABULAR)        */
 /* ========================================= */
 .table-container {
     flex: 1;
@@ -286,6 +270,7 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     top: 0;
     z-index: 10;
     border-bottom: 1px solid var(--border);
+    cursor: pointer;
 }
 
 .data-table td {
@@ -297,73 +282,81 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
 .data-table tbody tr:hover { background-color: rgba(255, 255, 255, 0.05); }
 
 /* ========================================= */
-/* [VEND-01] VISÃO VENDEDORES (RANKING)      */
+/* VISÃO VENDEDORES (COCKPIT 4 QUADRANTES)   */
 /* ========================================= */
-.ranking-panel {
+
+.vendedores-grid-2x2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr; 
+    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    /* Ajuste A: Margens reduzidas para apenas 5px */
+    gap: 5px;
+    width: 100%;
+    max-width: 1400px; /* Aumentei levemente para aproveitar a tela */
+    margin: 0 auto; 
+    padding-bottom: 5px;
+    height: 100%; 
+}
+
+.ranking-chart-box {
     background: var(--bg-card);
-    border-radius: 12px;
+    border-radius: 10px;
     border: 1px solid var(--border);
-    padding: 20px;
+    /* Redução do padding para dar mais espaço aos gráficos */
+    padding: 15px;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    min-height: 0; 
+    overflow: hidden;
 }
 
-.section-title {
-    font-size: 1rem;
-    color: var(--primary);
-    font-family: var(--font-heading);
-    margin-bottom: 5px;
-}
-
-.ranking-controls {
+.ranking-header {
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 8px;
+    margin-bottom: 10px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+    flex-shrink: 0; 
 }
 
-.control-group-ranking {
+.ranking-controls-inline {
     display: flex;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 15px;
-    flex-wrap: wrap; /* Garante layout fluido no mobile */
+    gap: 10px;
 }
 
-.control-label {
-    color: var(--text-dim);
-    font-size: 0.8rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    width: 70px; /* Largura fixa alinha os controles */
+.divider-vertical {
+    width: 1px;
+    height: 20px;
+    background-color: var(--border);
 }
 
 .button-group {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap; /* Botões não quebram em telas pequenas */
+    gap: 6px;
+    flex-wrap: wrap;
 }
 
-/* Estilo Base dos Botões (Pílulas) */
 .btn-ranking-ref, .btn-ranking-metric {
     background: #1a1a1a;
     color: var(--text-dim);
     border: 1px solid #333;
-    padding: 8px 16px;
+    padding: 4px 10px;
     border-radius: 20px;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     font-weight: 600;
     cursor: pointer;
     transition: all var(--transition);
     font-family: var(--font-body);
 }
 
-/* Efeito Hover */
 .btn-ranking-ref:hover, .btn-ranking-metric:hover {
     border-color: var(--primary);
     color: var(--text-main);
 }
 
-/* Estado Ativo (Botão Selecionado) */
 .btn-ranking-ref.active, .btn-ranking-metric.active {
     background: var(--primary);
     color: #000;
@@ -371,69 +364,174 @@ canvas { width: 100% !important; height: 100% !important; display: block; }
     font-weight: 800;
 }
 
-.ranking-chart-box {
-    background: var(--bg-card);
-    border-radius: 12px;
-    border: 1px solid var(--border);
-    padding: 20px;
-    flex: 1; /* Faz a caixa crescer preenchendo a tela */
-    display: flex;
-    flex-direction: column;
-    min-height: 400px;
-}
-
 .canvas-wrapper-ranking {
     flex: 1;
-    position: relative;
+    position: relative; 
     width: 100%;
+    min-height: 0; 
+}
+
+.canvas-wrapper-ranking canvas {
+    position: absolute;
+    top: 0; left: 0; bottom: 0; right: 0;
+}
+
+/* ----------------------------------------- */
+/* QUADRANTE 2: PÓDIO DE METAS (TOP 3)       */
+/* ----------------------------------------- */
+
+.podio-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-end; /* O segredo: alinha os itens na base! */
+    gap: 15px;
+    flex: 1;
+    padding-top: 10px;
+    height: 100%;
+}
+
+.podio-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 25%;
+    position: relative;
+}
+
+.podio-avatar {
+    font-size: 1.8rem;
+    margin-bottom: 5px;
+    text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.podio-nome {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-main);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+
+.podio-nota {
+    font-size: 0.9rem;
+    font-weight: 800;
+    margin-bottom: 8px;
+}
+
+.podio-barra {
+    width: 100%;
+    border-radius: 6px 6px 0 0;
+    /* Adicionamos uma sombra interna para dar volume ao pódio */
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
+    transition: height 1s ease-out; /* Animação suave de crescimento */
+}
+
+/* Configurações específicas para cada lugar do pódio */
+
+/* 1º LUGAR (Ouro) */
+.pos-1 .podio-barra { height: 100px; background: linear-gradient(180deg, var(--primary) 0%, #a87900 100%); }
+.pos-1 .podio-nota { color: var(--primary); }
+
+/* 2º LUGAR (Prata) */
+.pos-2 .podio-barra { height: 70px; background: linear-gradient(180deg, #e0e0e0 0%, #888888 100%); }
+.pos-2 .podio-nota { color: #e0e0e0; }
+
+/* 3º LUGAR (Bronze) */
+.pos-3 .podio-barra { height: 45px; background: linear-gradient(180deg, #cd7f32 0%, #8b5a2b 100%); }
+.pos-3 .podio-nota { color: #cd7f32; }
+
+
+/* Filtro interno exclusivo */
+.select-dark {
+    background: transparent;
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    font-size: 0.7rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    outline: none;
+}
+.select-dark option {
+    background: var(--bg-card);
+    color: var(--text-main);
+}
+
+/* ----------------------------------------- */
+/* QUADRANTE 3: MATRIZ DE CALOR (HEATMAP)    */
+/* ----------------------------------------- */
+.heatmap-table {
+    width: 100%; 
+    height: 100%; /* Força a tabela a ocupar o espaço certinho */
+    border-collapse: collapse; 
+    font-size: 0.7rem; 
+    text-align: center;
+}
+
+.heatmap-table th {
+    background: #000; 
+    color: var(--text-dim); 
+    padding: 6px; 
+    font-weight: 700; 
+    border-bottom: 1px solid var(--border);
+}
+
+.heatmap-table td {
+    padding: 6px; 
+    border-bottom: 1px solid #1a1a1a; 
+    color: #fff; 
+    font-weight: 600;
+}
+
+.heatmap-table td.nome-vend { 
+    text-align: left; 
+    font-weight: 700; 
+    color: var(--text-main); 
 }
 
 /* ========================================= */
 /* MEDIA QUERIES (RESPONSIVIDADE MASTER)     */
 /* ========================================= */
 
-/* Notebooks médios */
 @media (max-width: 1280px) {
     .main-charts-row { grid-template-columns: 1fr 1fr; }
 }
 
-/* Tablets e Celulares - DESBLOQUEIA ROLAGEM */
 @media (max-width: 1024px) {
     body { 
         overflow-y: auto; 
         overflow-x: hidden; 
     }
     
-    .main-content {
+    .main-content, .view-section {
         height: auto;
         min-height: 100vh;
         overflow-y: visible;
     }
-    
-    .view-section { 
-        height: auto; 
-        min-height: 100vh;
-        overflow-y: visible; 
-    }
 
     .main-charts-row,
-    .atingimento-row {
+    .atingimento-row,
+    .vendedores-grid-2x2 { 
         grid-template-columns: 1fr;
+        grid-template-rows: auto; 
         height: auto;
+    }
+    
+    .ranking-chart-box {
+        min-height: 400px; 
     }
 
     .kpi-grid { height: auto; }
 }
 
-/* iPads e Celulares grandes */
 @media (max-width: 768px) {
     .top-header { flex-direction: column; height: auto; padding: 15px; gap: 15px; }
-    .header-left { width: 100%; justify-content: center; }
-    .header-right { width: 100%; }
-    .global-filters { justify-content: center; width: 100%; }
+    .header-left, .header-right, .global-filters { width: 100%; justify-content: center; }
 }
 
-/* Celulares (iPhone 390x844) */
 @media (max-width: 600px) {
     .sidebar { display: none; }
     .main-content { margin-left: 0; width: 100vw; }

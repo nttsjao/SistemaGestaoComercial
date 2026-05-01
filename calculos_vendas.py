@@ -61,19 +61,18 @@ def calcular_kpis_topo(db, df_meta):
     }
 
 #TODO ==> 3. ESTRUTURA TABULAR DE UNIDADES (BASE PARA TODAS AS VISÕES)
-#? [MISSÃO D06/D01] Cruza Fato e Dimensão para gerar performance por PDV
+#? Cruza Fato e Dimensão para gerar performance por PDV
 def preparar_base_unidades_completa(db, df_meta):
     tempo = obter_metricas_tempo()
     df_snap = db['vendas_snapshot'].copy()
     df_lojas = db['dim_lojas'].copy()
     
-    #* 🛡️ SANITIZAÇÃO DE IDs (Fix para o Erro de Merge: object vs float64)
-    #* Converte para numérico (ignora erros), preenche com -1, força inteiro, força string
+    #* Sanitização de IDs para evitar erro de Merge
     df_meta['ID_LOJA'] = pd.to_numeric(df_meta['ID_LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
     df_snap['ID LOJA'] = pd.to_numeric(df_snap['ID LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
     df_lojas['ID LOJA'] = pd.to_numeric(df_lojas['ID LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
 
-    #* [NOVO D01] Base de Histórico Diário para a Visão Tabular
+    #* Base de Histórico Diário para a Visão Tabular
     df_snap['Date'] = pd.to_datetime(df_snap['Date'], dayfirst=True, errors='coerce')
     df_cat_daily = df_snap.groupby(['ID LOJA', 'Date', 'CATEGORIA'])['REALIZADO'].sum().unstack(fill_value=0).reset_index()
     for col in ['ACE', 'PRT', 'CEL', 'SOM']:
@@ -83,12 +82,12 @@ def preparar_base_unidades_completa(db, df_meta):
     }).reset_index()
     df_daily_master = df_vendas_daily.merge(df_cat_daily, on=['ID LOJA', 'Date'], how='left')
 
-    #* 1. Realizado por Categoria (ACE e PRT dinâmicos para gauges)
+    #* 1. Realizado por Categoria
     rel_cat = df_snap.groupby(['ID LOJA', 'CATEGORIA'])['REALIZADO'].sum().unstack(fill_value=0).reset_index()
     for col in ['ACE', 'PRT', 'CEL', 'SOM']:
         if col not in rel_cat: rel_cat[col] = 0
 
-    #* 1.1 Sazonalidade Quebrada por Loja (Base JS Dinâmico)
+    #* 1.1 Sazonalidade Quebrada por Loja
     dias_map = {'Monday':'Seg', 'Tuesday':'Ter', 'Wednesday':'Qua', 'Thursday':'Qui', 'Friday':'Sex', 'Saturday':'Sáb', 'Sunday':'Dom'}
     df_snap['Dia_Semana'] = df_snap['Date'].dt.day_name().map(dias_map)
     rel_saz = df_snap.groupby(['ID LOJA', 'Dia_Semana'])['REALIZADO'].sum().unstack(fill_value=0).reset_index()
@@ -96,7 +95,7 @@ def preparar_base_unidades_completa(db, df_meta):
     for dia in ordem_dias:
         if dia not in rel_saz: rel_saz[dia] = 0
 
-    #* 1.2 Mix de Planos Quebrado por Loja (Base JS Dinâmico)
+    #* 1.2 Mix de Planos Quebrado por Loja
     df_plano = db['vendas_plano'].copy()
     df_plano['ID LOJA'] = pd.to_numeric(df_plano['ID LOJA'], errors='coerce').fillna(-1).astype(int).astype(str)
     
@@ -129,21 +128,21 @@ def preparar_base_unidades_completa(db, df_meta):
     if planos_cols:
         df_tab = df_tab.merge(rel_planos, on='ID LOJA', how='left').fillna(0)
     
-    #* 4. Merge com Dimensão Lojas (Nomes e Atributos)
+    #* 4. Merge com Dimensão Lojas
     df_tab = df_tab.merge(df_lojas[['ID LOJA', 'NOME PDV', 'ID TIPO', 'TIPO PDV']], 
                           left_on='ID_LOJA', right_on='ID LOJA', how='left')
 
-    #* 5. Métricas Calculadas (Projeção e Eficiência)
+    #* 5. Métricas Calculadas
     df_tab['PROJECAO_VAL'] = (df_tab['REALIZADO'] / tempo['dia']) * tempo['total']
     df_tab['PROJECAO_PERC'] = (df_tab['PROJECAO_VAL'] / df_tab['META_GERAL'] * 100).replace([np.inf, -np.inf], 0).fillna(0)
     df_tab['TICKET'] = df_tab['REALIZADO'] / df_tab['N_VENDAS'].replace(0, 1)
     df_tab['PA'] = df_tab['QTD_PEÇAS'] / df_tab['N_VENDAS'].replace(0, 1)
     
-    #* [NOVO D01] Meta Diária com fórmula exata e trava de segurança
+    #* Meta Diária Restante
     dias_restantes = max(tempo['total'] - tempo['dia'], 1)
     df_tab['META_DIARIA'] = (df_tab['META_GERAL'] - df_tab['REALIZADO']) / dias_restantes
     
-    #* 6. [NOVO] Empacotamento Inteligente (Criação de Dicionários Locais por Loja para o JS)
+    #* 6. Empacotamento de Dicionários para o Frontend (JS)
     df_tab['sazonalidade'] = df_tab.apply(lambda row: {dia: row.get(dia, 0) for dia in ordem_dias}, axis=1)
     df_tab['mix_categorias'] = df_tab.apply(lambda row: {c: row.get(c, 0) for c in ['CEL', 'SOM', 'ACE', 'PRT']}, axis=1)
     if planos_cols:
@@ -151,7 +150,7 @@ def preparar_base_unidades_completa(db, df_meta):
     else:
         df_tab['mix_planos'] = df_tab.apply(lambda row: {}, axis=1) 
 
-    #* [NOVO D01] Anexando o Histórico Diário em cada Loja
+    #* Anexando o Histórico Diário
     def gerar_historico(id_loja):
         vendas_loja = df_daily_master[df_daily_master['ID LOJA'] == id_loja].copy()
         if vendas_loja.empty: return []
@@ -163,26 +162,24 @@ def preparar_base_unidades_completa(db, df_meta):
     return df_tab.to_dict(orient='records')
 
 #TODO ==> 4. ANÁLISE OPERACIONAL (SAZONALIDADE E MIXES)
-#? Gera os dados para gráficos de Barras e Roscas (Somente Mês Vigente)
+#? Gera os dados para gráficos da Visão Geral
 def preparar_analise_geral_completa(db):
     tempo = obter_metricas_tempo()
     df_snap = db['vendas_snapshot'].copy()
     
-    #* 4.1 Sazonalidade (Faturamento por Dia da Semana)
+    #* 4.1 Sazonalidade
     dias_map = {'Monday':'Seg', 'Tuesday':'Ter', 'Wednesday':'Qua', 'Thursday':'Qui', 'Friday':'Sex', 'Saturday':'Sáb', 'Sunday':'Dom'}
     df_snap['Date'] = pd.to_datetime(df_snap['Date'], dayfirst=True, errors='coerce')
     df_snap['Dia_Semana'] = df_snap['Date'].dt.day_name().map(dias_map)
     ordem_dias = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom']
     sazonalidade = df_snap.groupby('Dia_Semana')['REALIZADO'].sum().reindex(ordem_dias).fillna(0).to_dict()
 
-    #* 4.2 Mix de Categorias (Base Snapshot)
+    #* 4.2 Mix de Categorias
     mix_cat = df_snap.groupby('CATEGORIA')['REALIZADO'].sum().to_dict()
 
-    #* 4.3 Mix de Planos (FILTRO MÊS VIGENTE + JOIN DIMENSÃO)
+    #* 4.3 Mix de Planos
     df_plano = db['vendas_plano'].copy()
     df_plano['Date'] = pd.to_datetime(df_plano['Date'], dayfirst=True, errors='coerce')
-    
-    #? Filtro rigoroso: Apenas mês e ano atuais para Mix de Planos
     df_plano_vigente = df_plano[
         (df_plano['Date'].dt.month == tempo['mes']) & 
         (df_plano['Date'].dt.year == tempo['ano'])
@@ -198,6 +195,76 @@ def preparar_analise_geral_completa(db):
         'mix_planos': mix_planos
     }
 
+#TODO ==> 4.5 ESTRUTURA TABULAR DE VENDEDORES (MOTOR DO COCKPIT DE RANKING)
+#? Cruza Fato, Dimensão e aplica rateio de metas proporcionais
+def preparar_base_vendedores_completa(db, df_metas_pdv, df_metas_vend):
+    df_snap = db['vendas_snapshot'].copy()
+    df_lojas = db['dim_lojas'].copy()
+
+    #* [NOVO] TRATAMENTO: LIMPEZA DE DADOS (DEDUPLICAÇÃO)
+    df_snap['VENDEDOR'] = df_snap['VENDEDOR'].astype(str).str.replace(r'\s*\(\s*\d+\s*\)$', '', regex=True).str.strip().str.upper()
+
+    #* 1. Agrupamento Básico do Vendedor
+    base_vend = df_snap.groupby(['ID VENDEDOR', 'VENDEDOR', 'ID LOJA']).agg({
+        'REALIZADO': 'sum',
+        'QTD_PEÇAS': 'sum',
+        'N_VENDAS': 'sum'
+    }).reset_index()
+
+    #* 2. Pivot de Categorias (Gera colunas: CEL, ACE, SOM, PRT)
+    cat_vend = df_snap.groupby(['ID VENDEDOR', 'CATEGORIA'])['REALIZADO'].sum().unstack(fill_value=0).reset_index()
+    for c in ['CEL', 'ACE', 'SOM', 'PRT']:
+        if c not in cat_vend: cat_vend[c] = 0
+
+    base_vend = base_vend.merge(cat_vend[['ID VENDEDOR', 'CEL', 'ACE', 'SOM', 'PRT']], on='ID VENDEDOR', how='left').fillna(0)
+
+    #* 3. Merge com Lojas para puxar Atributos (ID TIPO)
+    base_vend = base_vend.merge(df_lojas[['ID LOJA', 'ID TIPO']], on='ID LOJA', how='left')
+
+    #* 4. Tratamento Inteligente de Metas
+    if not df_metas_vend.empty:
+        metas = df_metas_vend[['ID_VENDEDOR', 'META_GERAL', 'META_ACE', 'META_PRT']].copy()
+        metas['ID_VENDEDOR'] = metas['ID_VENDEDOR'].astype(str)
+        base_vend = base_vend.merge(metas, left_on='ID VENDEDOR', right_on='ID_VENDEDOR', how='left')
+    else:
+        base_vend['META_GERAL'] = np.nan
+        base_vend['META_ACE'] = np.nan
+        base_vend['META_PRT'] = np.nan
+
+    #* 4.1 Cálculo da Meta Proporcional (Descobre quantos vendedores a loja tem)
+    qtd_vendedores = base_vend.groupby('ID LOJA')['ID VENDEDOR'].nunique().reset_index()
+    qtd_vendedores.rename(columns={'ID VENDEDOR': 'QTD_VEND_LOJA'}, inplace=True)
+    base_vend = base_vend.merge(qtd_vendedores, on='ID LOJA', how='left')
+
+    #* 4.2 Puxa a meta total da Loja
+    if not df_metas_pdv.empty:
+        metas_loja = df_metas_pdv[['ID_LOJA', 'META_GERAL', 'META_ACE', 'META_PRT']].copy()
+        metas_loja.columns = ['ID LOJA', 'META_LOJA_GERAL', 'META_LOJA_ACE', 'META_LOJA_PRT']
+        metas_loja['ID LOJA'] = metas_loja['ID LOJA'].astype(str)
+        base_vend = base_vend.merge(metas_loja, on='ID LOJA', how='left')
+    else:
+        base_vend['META_LOJA_GERAL'] = 0
+        base_vend['META_LOJA_ACE'] = 0
+        base_vend['META_LOJA_PRT'] = 0
+
+    #* 4.3 Aplica o Rateio
+    base_vend['META_GERAL'] = base_vend['META_GERAL'].fillna(base_vend['META_LOJA_GERAL'] / base_vend['QTD_VEND_LOJA'].replace(0, 1))
+    base_vend['META_ACE'] = base_vend['META_ACE'].fillna(base_vend['META_LOJA_ACE'] / base_vend['QTD_VEND_LOJA'].replace(0, 1))
+    base_vend['META_PRT'] = base_vend['META_PRT'].fillna(base_vend['META_LOJA_PRT'] / base_vend['QTD_VEND_LOJA'].replace(0, 1))
+    base_vend.fillna(0, inplace=True)
+
+    #* 5. Cálculo dos KPIs de Qualidade Individual
+    base_vend['TICKET'] = base_vend['REALIZADO'] / base_vend['N_VENDAS'].replace(0, 1)
+    base_vend['PA'] = base_vend['QTD_PEÇAS'] / base_vend['N_VENDAS'].replace(0, 1)
+
+    #* 6. Padronização de Nomes para o JavaScript
+    base_vend.rename(columns={
+        'VENDEDOR': 'NOME VENDEDOR',
+        'ID LOJA': 'ID_LOJA'
+    }, inplace=True)
+
+    return base_vend.to_dict(orient='records')
+
 #TODO ==> 5. EXPORTADOR DE DADOS (DADOS.JS)
 #? Compila todas as métricas em um JSON estruturado para o Frontend
 def exportar_dados_dashboard(db, df_metas_pdv, df_metas_vend, caminho_destino='dashboard/dados.js'):
@@ -205,13 +272,25 @@ def exportar_dados_dashboard(db, df_metas_pdv, df_metas_vend, caminho_destino='d
         #* Garantia de datas formatadas no Snapshot
         db['vendas_snapshot']['Date'] = pd.to_datetime(db['vendas_snapshot']['Date'], dayfirst=True, errors='coerce')
         
+        #* Prepara a dimensão Regiões para o JSON (Quadrante 4)
+        df_regioes = db.get('dim_regioes', pd.DataFrame()).copy()
+        if not df_regioes.empty and 'ID LOJA' in df_regioes.columns:
+            # Padroniza nomes das chaves para o JavaScript não falhar
+            df_regioes.rename(columns={'ID LOJA': 'ID_LOJA', 'LOCALIZAÇÃO': 'LOCALIZACAO'}, inplace=True)
+            df_regioes['ID_LOJA'] = df_regioes['ID_LOJA'].astype(str)
+            regioes_export = df_regioes.to_dict(orient='records')
+        else:
+            regioes_export = []
+        
+        #* Construção do Dicionário Final
         payload = {
             "ultima_atualizacao": datetime.now().strftime("%d/%m/%Y %H:%M"),
             "tempo": obter_metricas_tempo(),
             "geral": calcular_kpis_topo(db, df_metas_pdv),
             "unidades": preparar_base_unidades_completa(db, df_metas_pdv),
             "analise_geral": preparar_analise_geral_completa(db),
-            "vendedores": db['vendas_snapshot'].groupby('VENDEDOR')['REALIZADO'].sum().sort_values(ascending=False).to_dict()
+            "regioes": regioes_export,
+            "vendedores": preparar_base_vendedores_completa(db, df_metas_pdv, df_metas_vend)
         }
         
         #* Escrita física do arquivo JS
